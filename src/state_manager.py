@@ -21,19 +21,10 @@ def write_state(state_data: dict) -> bool:
         print(f"[ERROR] State write failure: {e}")
         return False
 
-def append_to_transcript(speaker_role: str, speaker_name: str, message: str):
+def save_extraction(intent: str, assumptions: dict):
     state = read_state()
-    if not state: return
-    # Initialize list if missing to prevent key errors
-    if "live_transcript" not in state: state["live_transcript"] = []
+    if "extractions" not in state: 
+        state["extractions"] = []
     
-    state["live_transcript"].append({"speaker_name": speaker_name, "role": speaker_role, "message": message})
+    state["extractions"].append({"intent": intent, "assumptions": assumptions})
     write_state(state)
-
-def log_private_nudge(target_role: str, nudge_content: str):
-    state = read_state()
-    if not state: return
-    
-    if target_role in state.get("private_nudges", {}):
-        state["private_nudges"][target_role].append(nudge_content)
-        write_state(state)
