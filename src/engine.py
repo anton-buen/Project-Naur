@@ -3,6 +3,7 @@ import logging
 import json
 import os
 import requests
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("CAE_Engine")
@@ -12,49 +13,52 @@ class CognitiveAlignmentEngine:
         self.state = sm.read_state()
         self.llm_endpoint = os.getenv("BOB_LLM_ENDPOINT", "http://localhost:8000/v1/chat/completions")
         self.api_key = os.getenv("BOB_API_KEY", "hackathon_mock_key")
+        self.use_mock = os.getenv("USE_MOCK_LLM", "True").lower() == "true"
 
-    def process_intent(self, intent: str) -> bool:
+    def process_intent(self, user_input: str) -> bool:
         try:
-            assumptions = self._extract_assumptions(intent)
+            # 1. Fetch current thread context
+            thread = self.state.get("thread", [])
+            
+            # 2. Append the new human message
+            thread.append({"role": "human", "content": user_input})
+            
+            # 3. Get the AI's updated assumptions based on the whole thread
+            assumptions = self._extract_assumptions(thread)
+            
             if assumptions:
-                sm.save_extraction(intent, assumptions)
+                # 4. Append the AI's response and save state
+                thread.append({"role": "assistant", "assumptions": assumptions})
+                self.state["thread"] = thread
+                sm.write_state(self.state)
                 return True
         except Exception as e:
-            logger.error(f"[LLM_EXTRACTION_FAILED] API timeout or failure. Error: {e}")
+            logger.error(f"[LLM_EXTRACTION_FAILED] Error: {e}")
         
         return False
 
-    def _extract_assumptions(self, intent: str) -> dict:
-        """
-        Forces the LLM to decompress a single intent into strict technical constraints.
-        """
-        system_prompt = (
-            "Extract 1 hidden constraint for Frontend(FE), Backend(BE), and DataScience(DS) "
-            "from the user intent. Return ONLY valid JSON: {\"FE\":\"\",\"BE\":\"\",\"DS\":\"\"}. Keep short."
-        )
-        
-        payload = {
-            "model": "ibm-bob-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": intent}
-            ],
-            "max_tokens": 50,
-            "temperature": 0.0
-        }
+    def _extract_assumptions(self, thread: list) -> dict:
+        if self.use_mock:
+            time.sleep(1.5)
+            
+            # Check the latest message to simulate continuous collaboration
+            latest_input = thread[-1]["content"].lower()
+            
+            # Simulated Response 2: The Pushback Resolution
+            if "polling" in latest_input or "load balancer" in latest_input:
+                return {
+                    "FE": "[UPDATED] Backend cannot support WebSockets. Implement a 5-second polling loop and handle loading/stale UI states gracefully.",
+                    "BE": "[LOCKED] AWS load balancer constraint accepted. Expose a lightweight HTTP polling endpoint.",
+                    "DS": "[UPDATED] 5-second polling allows for micro-batching. Update inference script to process 5-second event windows instead of single events."
+                }
+            
+            # Simulated Response 1: The Initial Extraction
+            return {
+                "FE": "Needs WebSockets or Long-Polling to handle 'real-time' updates without freezing the React thread.",
+                "BE": "Must implement strict rate-limiting on the API; querying on every page refresh will crash the server.",
+                "DS": "Browsing habits are unstructured text. The model needs an async queue because inference takes 3-5 seconds."
+            }
 
-        response = requests.post(
-            self.llm_endpoint,
-            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=3.0 
-        )
-        response.raise_for_status()
-        
-        llm_reply = response.json()["choices"][0]["message"]["content"]
-        
-        try:
-            return json.loads(llm_reply)
-        except json.JSONDecodeError:
-            logger.warning(f"[LLM_PARSE_ERROR] Invalid JSON from Bob: {llm_reply}")
-            return {}
+        # REAL PRODUCTION MODE (Placeholder for when we activate Bobcoins)
+        # Here we would map the `thread` list into the `messages` array for the LLM
+        return {}
