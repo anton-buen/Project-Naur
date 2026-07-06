@@ -1,12 +1,9 @@
 {
   "mcpServers": {
-    "cognitive-alignment-engine-server": {
+    "project-naur-engine": {
       "command": "python",
-      "args": ["src/engine.py"],
-      "env": {
-        "ENV_MODE": "development",
-        "PERSISTENCE_FILE": "session_state.json"
-      }
+      "args": ["-m", "src.mcp_server"],
+      "description": "Stateful Context Broker that exposes the Cognitive Alignment Engine to IBM Bob. Allows the agent to read cross-functional architecture threads and execute assumption-extraction logic natively."
     }
   }
 }
