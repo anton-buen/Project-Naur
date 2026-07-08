@@ -1,6 +1,5 @@
 import streamlit as st
 import src.state_manager as sm
-from src.engine import CognitiveAlignmentEngine
 
 # 1. UI Configuration
 st.set_page_config(page_title="Project Naur", layout="wide", initial_sidebar_state="expanded")
@@ -236,16 +235,7 @@ def generate_markdown_export(intent: str, assumptions: dict) -> str:
 # 2. Inject Theme
 apply_adaptive_theme()
 
-# 3. Engine 
-try:
-    if "engine" not in st.session_state:
-        st.session_state.engine = CognitiveAlignmentEngine()
-    engine = st.session_state.engine
-except Exception as e:
-    st.error(f"System Failure: {e}")
-    st.stop()
-
-# 4. Sidebar
+# 3. Sidebar
 with st.sidebar:
     st.markdown("<h2 class='naur-header' style='margin-bottom: 0.5rem; font-size: 1.6rem;'>Project Naur</h2>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 0.9rem; margin-bottom: 2rem; opacity: 0.8;'>Decompress feature intents to prevent integration failure.</p>", unsafe_allow_html=True)
@@ -272,81 +262,75 @@ with st.sidebar:
 
     st.markdown("<h3 style='font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;'>Session Admin</h3>", unsafe_allow_html=True)
     if st.button("Clear Ledger", use_container_width=True):
-        state = sm.read_state()
-        state["extractions"] = []
-        state["thread"] = []
-        sm.write_state(state)
+        sm.clear_ledger()
         st.rerun()
 
 # 5. Cross-Functional Alignment Thread
 st.markdown("<h2 class='naur-header' style='margin-top: 0; font-size: 1.5rem;'>Cross-Functional Alignment Thread</h2>", unsafe_allow_html=True)
 st.markdown("<p style='font-size: 0.85rem; opacity: 0.6; margin-top: -0.75rem; margin-bottom: 1.5rem;'>Identifies integration blockers before the sprint begins.</p>", unsafe_allow_html=True)
 
-state = sm.read_state()
-thread = state.get("thread", [])
+# --- Global Alignment Dashboard ---
+constraints = sm.get_constraints()
+glossary = sm.get_glossary()
+
+if constraints or glossary:
+    # Derive highest risk level across all domains
+    risk_priority = {"HIGH": 2, "MEDIUM": 1, "LOW": 0}
+    highest_risk = max(
+        (v["risk"] for v in constraints.values() if v.get("risk") in risk_priority),
+        key=lambda r: risk_priority.get(r, 0),
+        default="LOW"
+    )
+    risk_class = {"HIGH": "risk-high", "MEDIUM": "risk-medium", "LOW": "risk-low"}.get(highest_risk, "risk-low")
+    st.markdown(
+        f"<div class='risk-badge {risk_class}'>&#9632; Alignment Risk: {highest_risk}</div>",
+        unsafe_allow_html=True
+    )
+
+    # --- Domain Constraint Cards ---
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        fe = constraints.get("FE", {}).get("text", "No constraints detected.")
+        st.markdown(f"<div class='tech-card card-fe'><div class='card-title' style='color: #78a9ff;'>Frontend Requirements</div>{fe}</div>", unsafe_allow_html=True)
+    with col2:
+        be = constraints.get("BE", {}).get("text", "No constraints detected.")
+        st.markdown(f"<div class='tech-card card-be'><div class='card-title' style='color: #42be65;'>Backend Requirements</div>{be}</div>", unsafe_allow_html=True)
+    with col3:
+        ds = constraints.get("DS", {}).get("text", "No constraints detected.")
+        st.markdown(f"<div class='tech-card card-ds'><div class='card-title' style='color: #be95ff;'>Data Science Requirements</div>{ds}</div>", unsafe_allow_html=True)
+
+    # --- Project Dictionary ---
+    if glossary:
+        terms_html = "".join([
+            f"<div class='glossary-term'>{term}</div>"
+            f"<div class='glossary-definition'>{definition}</div>"
+            for term, definition in glossary.items()
+        ])
+        st.markdown(
+            f"<div class='glossary-section'>"
+            f"<div class='glossary-title'>&#9679; Project Dictionary "
+            f"<span title='Agreed-upon definitions to prevent miscommunication.' style='cursor: help;'>&#8505;</span>"
+            f"</div>"
+            f"{terms_html}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+# --- Chat History ---
+thread = sm.get_chat_history()
 
 if not thread:
     st.markdown("<div style='opacity: 0.6; margin-top: 1rem;'>The thread is empty. Propose a feature below to begin alignment.</div>", unsafe_allow_html=True)
 else:
-    for index, msg in enumerate(thread):
+    for msg in thread:
         if msg["role"] == "human":
             with st.chat_message("human"):
                 st.markdown(f"<div style='font-weight: 600; font-size: 1.05rem;'>{msg['content']}</div>", unsafe_allow_html=True)
-        
         elif msg["role"] == "assistant":
             with st.chat_message("assistant"):
-                assumptions = msg.get('assumptions', {})
-                
-                # --- Risk Score Badge ---
-                risk = assumptions.get('risk_score', '')
-                if risk:
-                    risk_class = {"HIGH": "risk-high", "MEDIUM": "risk-medium", "LOW": "risk-low"}.get(risk, "risk-low")
-                    st.markdown(
-                        f"<div class='risk-badge {risk_class}'>&#9632; Alignment Risk: {risk}</div>",
-                        unsafe_allow_html=True
-                    )
-                
-                # --- Domain Delta Cards ---
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.markdown(f"<div class='tech-card card-fe'><div class='card-title' style='color: #78a9ff;'>Frontend Requirements</div>{assumptions.get('FE', 'No constraints detected.')}</div>", unsafe_allow_html=True)
-                with col2:
-                    st.markdown(f"<div class='tech-card card-be'><div class='card-title' style='color: #42be65;'>Backend Requirements</div>{assumptions.get('BE', 'No constraints detected.')}</div>", unsafe_allow_html=True)
-                with col3:
-                    st.markdown(f"<div class='tech-card card-ds'><div class='card-title' style='color: #be95ff;'>Data Science Requirements</div>{assumptions.get('DS', 'No constraints detected.')}</div>", unsafe_allow_html=True)
-                
-                # --- Integration Blockers Banner ---
-                blockers = assumptions.get('blockers', '')
-                if blockers:
-                    st.markdown(
-                        f"<div class='blockers-banner'>"
-                        f"<div class='blockers-title'>&#9888; Integration Blockers "
-                        f"<span title='Dependencies that must be resolved before coding starts.' style='cursor: help;'>&#8505;</span>"
-                        f"</div>"
-                        f"{blockers}"
-                        f"</div>",
-                        unsafe_allow_html=True
-                    )
-                
-                # --- Project Dictionary ---
-                dictionary = assumptions.get('dictionary', {})
-                if dictionary:
-                    terms_html = "".join([
-                        f"<div class='glossary-term'>{term}</div>"
-                        f"<div class='glossary-definition'>{definition}</div>"
-                        for term, definition in dictionary.items()
-                    ])
-                    st.markdown(
-                        f"<div class='glossary-section'>"
-                        f"<div class='glossary-title'>&#9679; Project Dictionary "
-                        f"<span title='Agreed-upon definitions to prevent miscommunication.' style='cursor: help;'>&#8505;</span>"
-                        f"</div>"
-                        f"{terms_html}"
-                        f"</div>",
-                        unsafe_allow_html=True
-                    )
-                
-                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(msg["content"], unsafe_allow_html=True)
 
 # Padding
 st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
@@ -356,19 +340,11 @@ if user_intent := st.chat_input("Join the discussion... (e.g., 'We can't use Web
     # Prepend the active role to contextualise the message for the engine
     active_role = st.session_state.get("active_role", "Product Manager")
     stamped_intent = f"[{active_role}] {user_intent}"
-    
+
     # Append global team context if provided
     global_context = st.session_state.get("global_context", "").strip()
     if global_context:
         stamped_intent += f" [Team Context: {global_context}]"
-    
-    with st.chat_message("human"):
-        st.markdown(f"<div style='font-weight: 600; font-size: 1.05rem;'>{stamped_intent}</div>", unsafe_allow_html=True)
-    
-    with st.chat_message("assistant"):
-        with st.spinner("Synthesizing constraints..."):
-            success = engine.process_intent(stamped_intent)
-        if success:
-            st.rerun()
-        else:
-            st.error("System failure.")
+
+    sm.append_message("human", stamped_intent)
+    st.rerun()

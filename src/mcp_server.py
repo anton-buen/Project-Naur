@@ -3,25 +3,26 @@ src/mcp_server.py
 
 MCP (Model Context Protocol) server for Project NAUR.
 
-Exposes the CognitiveAlignmentEngine to external MCP-compatible agents
-(e.g., IBM Bob) over stdio transport. The server registers a single tool,
-`process_architecture_intent`, that accepts a natural-language string,
-runs it through the engine's assumption-extraction pipeline, and returns
-a human-readable result string.
+Exposes the Project Naur SQLite state to external MCP-compatible agents
+(e.g., IBM Bob) over stdio transport. Three tools are registered:
+
+  • read_architecture_thread    — fetch the current discussion thread
+  • update_domain_constraint    — write a FE / BE / DS constraint + risk level
+  • upsert_project_dictionary   — add or update a term in the shared glossary
 
 Usage:
     python -m src.mcp_server
 """
 
 import asyncio
+import json
 import logging
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
-from mcp import types
 
-from src.engine import CognitiveAlignmentEngine
+import src.state_manager as sm
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -46,82 +47,119 @@ async def list_tools() -> list[Tool]:
     """Advertise the tools this server exposes to the connected MCP agent."""
     return [
         Tool(
-            name="process_architecture_intent",
+            name="read_architecture_thread",
             description=(
-                "Pass a natural-language architecture intent or discussion "
-                "thread entry to the Cognitive Alignment Engine. "
-                "The engine extracts cross-functional assumptions for the "
-                "Frontend, Backend, and Data-Science domains and persists "
-                "them to the shared session state. "
-                "Returns a success or failure message."
+                "Fetches the current cross-functional discussion thread from "
+                "the Project Naur ledger. Returns the full chat history as a "
+                "JSON-encoded list of {role, content} objects."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="update_domain_constraint",
+            description=(
+                "Writes or overwrites a technical constraint for a specific "
+                "engineering domain (FE, BE, or DS) and records its risk level. "
+                "Persists to the shared SQLite state so the UI dashboard reflects "
+                "the change immediately."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "user_input": {
+                    "domain": {
+                        "type": "string",
+                        "description": "Engineering domain: 'FE', 'BE', or 'DS'.",
+                        "enum": ["FE", "BE", "DS"],
+                    },
+                    "constraint_text": {
                         "type": "string",
                         "description": (
-                            "The architecture intent or message to process, "
-                            "e.g. 'We need real-time updates for the dashboard'."
+                            "Human-readable description of the technical constraint, "
+                            "e.g. 'Must use React 18 with server-side rendering'."
                         ),
-                    }
+                    },
+                    "risk_level": {
+                        "type": "string",
+                        "description": "Alignment risk: 'HIGH', 'MEDIUM', or 'LOW'.",
+                        "enum": ["HIGH", "MEDIUM", "LOW"],
+                    },
                 },
-                "required": ["user_input"],
+                "required": ["domain", "constraint_text", "risk_level"],
             },
-        )
+        ),
+        Tool(
+            name="upsert_project_dictionary",
+            description=(
+                "Adds a new term or updates an existing term in the shared "
+                "Project Dictionary / ontological glossary. Persists to the "
+                "SQLite state so the UI reflects the change immediately."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "term": {
+                        "type": "string",
+                        "description": "The term or concept to define.",
+                    },
+                    "definition": {
+                        "type": "string",
+                        "description": "The agreed-upon definition for that term.",
+                    },
+                },
+                "required": ["term", "definition"],
+            },
+        ),
     ]
 
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """
-    Dispatch incoming tool calls to the appropriate handler.
+    """Dispatch incoming tool calls to the appropriate handler."""
 
-    Currently only `process_architecture_intent` is registered.
-    """
-    if name != "process_architecture_intent":
-        raise ValueError(f"Unknown tool: '{name}'")
+    # --- Tool: read_architecture_thread ---
+    if name == "read_architecture_thread":
+        logger.info("[TOOL CALL] read_architecture_thread")
+        history = sm.get_chat_history()
+        return [TextContent(type="text", text=json.dumps(history, ensure_ascii=False))]
 
-    user_input: str = arguments.get("user_input", "").strip()
+    # --- Tool: update_domain_constraint ---
+    elif name == "update_domain_constraint":
+        domain: str = arguments.get("domain", "").strip().upper()
+        constraint_text: str = arguments.get("constraint_text", "").strip()
+        risk_level: str = arguments.get("risk_level", "LOW").strip().upper()
 
-    if not user_input:
-        return [
-            TextContent(
-                type="text",
-                text="Error: 'user_input' must be a non-empty string.",
-            )
-        ]
-
-    logger.info("[TOOL CALL] process_architecture_intent | input='%s'", user_input)
-
-    try:
-        # Instantiate a fresh engine for each call so it always reads the
-        # latest persisted state from disk before processing.
-        engine = CognitiveAlignmentEngine()
-        success: bool = engine.process_intent(user_input)
-    except Exception as exc:
-        logger.exception("[TOOL ERROR] CognitiveAlignmentEngine raised an exception.")
-        return [
-            TextContent(
-                type="text",
-                text=f"Error: The engine encountered an unexpected problem — {exc}",
-            )
-        ]
-
-    if success:
-        message = (
-            "Success: The architecture intent was processed and cross-functional "
-            "assumptions have been updated in the session state."
+        logger.info(
+            "[TOOL CALL] update_domain_constraint | domain=%s risk=%s",
+            domain, risk_level,
         )
-        logger.info("[TOOL RESULT] success")
+
+        success = sm.update_constraint(domain, constraint_text, risk_level)
+        if success:
+            text = f"Success: Constraint for domain '{domain}' updated with risk level '{risk_level}'."
+        else:
+            text = f"Failure: Could not update constraint for domain '{domain}'. Check server logs."
+        return [TextContent(type="text", text=text)]
+
+    # --- Tool: upsert_project_dictionary ---
+    elif name == "upsert_project_dictionary":
+        term: str = arguments.get("term", "").strip()
+        definition: str = arguments.get("definition", "").strip()
+
+        logger.info("[TOOL CALL] upsert_project_dictionary | term='%s'", term)
+
+        success = sm.upsert_glossary_term(term, definition)
+        if success:
+            text = f"Success: Term '{term}' upserted into the Project Dictionary."
+        else:
+            text = f"Failure: Could not upsert term '{term}'. Check server logs."
+        return [TextContent(type="text", text=text)]
+
     else:
-        message = (
-            "Failure: The engine could not extract assumptions from the provided "
-            "input. Check the server logs for details."
-        )
-        logger.warning("[TOOL RESULT] failure")
-
-    return [TextContent(type="text", text=message)]
+        raise ValueError(f"Unknown tool: '{name}'")
 
 
 # ---------------------------------------------------------------------------
