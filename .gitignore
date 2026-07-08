@@ -6,3 +6,5 @@ venv/
 .env
 session_state.json.tmp
 .DS_Store
+
+session_state.json
