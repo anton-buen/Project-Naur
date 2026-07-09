@@ -74,7 +74,7 @@ def clear_ledger() -> bool:
     try:
         with get_connection() as conn:
             conn.execute("DELETE FROM chat_ledger")
-            conn.execute("DELETE FROM domain_constraints")
+            #conn.execute("DELETE FROM domain_constraints")
             # We explicitly leave project_glossary intact so teams don't lose their shared dictionary!
         return True
     except sqlite3.Error as e:
