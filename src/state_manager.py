@@ -2,7 +2,13 @@ import sqlite3
 import logging
 import os
 
-DB_FILE = "naur_state.db"
+# 1. Dynamically find the absolute path to the root 'Project Naur' folder
+# (Since this file is in src/, we go up one directory)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 2. Hardcode the absolute path to ensure all processes hit the exact same file
+DB_FILE = os.path.join(BASE_DIR, "naur_state.db")
+
 logger = logging.getLogger("naur.state_manager")
 
 def get_connection():
