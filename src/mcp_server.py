@@ -1,13 +1,11 @@
 """
-src/mcp_server.py
-
 MCP (Model Context Protocol) server for Project NAUR.
 
 Exposes the Project Naur SQLite state to external MCP-compatible agents
 (e.g., IBM Bob) over stdio transport. Three tools are registered:
 
   • read_architecture_thread    — fetch the current discussion thread
-  • update_domain_constraint    — write a FE / BE / DS constraint + risk level
+  • update_domain_constraint    — write a PROD/FE/BE/DS/UI/GLOBAL constraint + risk level
   • upsert_project_dictionary   — add or update a term in the shared glossary
 
 Usage:
@@ -50,7 +48,7 @@ async def list_tools() -> list[Tool]:
             name="update_domain_constraint",
             description=(
                 "Writes or overwrites a technical constraint for a specific "
-                "engineering domain (FE, BE, or DS) and records its risk level. "
+                "architectural domain (PROD, FE, BE, DS, UI, or GLOBAL) and records its risk level. "
                 "Persists to the shared SQLite state so the UI dashboard reflects "
                 "the change immediately."
             ),
@@ -59,8 +57,8 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "domain": {
                         "type": "string",
-                        "description": "Engineering domain: 'FE', 'BE', or 'DS'.",
-                        "enum": ["FE", "BE", "DS"],
+                        "description": "Architectural domain: 'PROD', 'FE', 'BE', 'DS', 'UI', or 'GLOBAL'.",
+                        "enum": ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"],
                     },
                     "constraint_text": {
                         "type": "string",
