@@ -24,23 +24,10 @@ from mcp.types import Tool, TextContent
 
 import src.state_manager as sm
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("naur.mcp_server")
 
-# ---------------------------------------------------------------------------
-# Server initialisation
-# ---------------------------------------------------------------------------
-
-# The server name must match the key used in .bob/mcp.json
 app = Server("project-naur-engine")
-
-# ---------------------------------------------------------------------------
-# Tool registration
-# ---------------------------------------------------------------------------
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
@@ -118,15 +105,12 @@ async def list_tools() -> list[Tool]:
 
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Dispatch incoming tool calls to the appropriate handler."""
-
-    # --- Tool: read_architecture_thread ---
+    """Dispatch an incoming tool call to the appropriate state_manager handler."""
     if name == "read_architecture_thread":
         logger.info("[TOOL CALL] read_architecture_thread")
         history = sm.get_chat_history()
         return [TextContent(type="text", text=json.dumps(history, ensure_ascii=False))]
 
-    # --- Tool: update_domain_constraint ---
     elif name == "update_domain_constraint":
         domain: str = arguments.get("domain", "").strip().upper()
         constraint_text: str = arguments.get("constraint_text", "").strip()
@@ -144,7 +128,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             text = f"Failure: Could not update constraint for domain '{domain}'. Check server logs."
         return [TextContent(type="text", text=text)]
 
-    # --- Tool: upsert_project_dictionary ---
     elif name == "upsert_project_dictionary":
         term: str = arguments.get("term", "").strip()
         definition: str = arguments.get("definition", "").strip()
@@ -161,10 +144,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     else:
         raise ValueError(f"Unknown tool: '{name}'")
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 async def main() -> None:
     """Start the MCP server and serve requests over stdio."""
