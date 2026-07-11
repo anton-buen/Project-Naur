@@ -4,6 +4,14 @@ import src.state_manager as sm
 
 st.set_page_config(page_title="Naur", layout="wide", initial_sidebar_state="expanded")
 
+def parse_markdown(text):
+    """Parses standard Markdown bold and italics into HTML for custom CSS rendering."""
+    # Parse **bold**
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    # Parse *italics* (using negative lookbehinds to not conflict with bold)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+    return text
+
 def apply_adaptive_theme():
     st.markdown("""
     <style>
@@ -35,72 +43,34 @@ def apply_adaptive_theme():
             }
         }
 
-        html, body, .stApp {
-            font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        }
-
-        h1, h2, h3 {
-            font-weight: 500 !important;
-            letter-spacing: -0.02em !important;
-        }
-
-        .subtext {
-            opacity: 0.6;
-            font-size: 0.9rem;
-            margin-top: -10px;
-            margin-bottom: 20px;
-        }
+        html, body, .stApp { font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; }
+        h1, h2, h3 { font-weight: 500 !important; letter-spacing: -0.02em !important; }
+        .subtext { opacity: 0.6; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px; }
         
         [data-testid="stExpander"] summary p {
             font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-            font-weight: 600 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.05em !important;
-            font-size: 0.85rem !important;
+            font-weight: 600 !important; text-transform: uppercase !important;
+            letter-spacing: 0.05em !important; font-size: 0.85rem !important;
         }
 
-        [data-testid="stChatInput"] textarea {
-            font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-            font-size: 1.05rem !important;
-        }
-        
-        [data-testid="stChatMessage"] {
-            background-color: transparent !important;
-            padding: 0.5rem 0 !important;
-        }
+        [data-testid="stChatInput"] textarea { font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; font-size: 1.05rem !important; }
+        [data-testid="stChatMessage"] { background-color: transparent !important; padding: 0.5rem 0 !important; }
         
         .chat-human {
-            background-color: rgba(128, 128, 128, 0.1);
-            padding: 1rem 1.25rem;
-            border-radius: 12px 12px 12px 2px;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            display: inline-block;
-            border: 1px solid rgba(128, 128, 128, 0.2);
-            color: inherit;
+            background-color: rgba(128, 128, 128, 0.1); padding: 1rem 1.25rem;
+            border-radius: 12px 12px 12px 2px; font-size: 0.95rem; line-height: 1.6;
+            display: inline-block; border: 1px solid rgba(128, 128, 128, 0.2); color: inherit;
         }
         
         .chat-ai {
-            background-color: transparent;
-            padding: 1rem 1.25rem;
-            border-radius: 12px 12px 2px 12px;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            opacity: 0.9;
-            display: inline-block;
-            border-left: 3px solid var(--naur-accent-risk);
-            color: inherit;
+            background-color: transparent; padding: 1rem 1.25rem;
+            border-radius: 12px 12px 2px 12px; font-size: 0.95rem; line-height: 1.6;
+            opacity: 0.9; display: inline-block; border-left: 3px solid var(--naur-accent-risk); color: inherit;
         }
 
         .tech-card {
-            padding: 1.5rem;
-            border-radius: 6px;
-            border: 1px solid rgba(128, 128, 128, 0.2);
-            background-color: rgba(128, 128, 128, 0.05);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            height: 100%;
-            color: inherit;
+            padding: 1.5rem; border-radius: 6px; border: 1px solid rgba(128, 128, 128, 0.2);
+            background-color: rgba(128, 128, 128, 0.05); font-size: 0.9rem; line-height: 1.6; height: 100%; color: inherit;
         }
 
         .card-prod { border-top: 4px solid var(--naur-accent-prod) !important; }
@@ -111,87 +81,33 @@ def apply_adaptive_theme():
         
         .card-title {
             font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.75rem;
-            opacity: 0.7;
+            font-weight: 600; margin-bottom: 1rem; text-transform: uppercase;
+            letter-spacing: 0.05em; font-size: 0.75rem; opacity: 0.7;
         }
 
         hr { border-color: rgba(128, 128, 128, 0.2) !important; margin: 2.5rem 0; }
         
         .risk-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
+            display: inline-block; padding: 0.5rem 1rem;
             font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
+            letter-spacing: 0.08em; border-radius: 4px; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        .risk-high { 
-            background-color: #B33A3A;
-            color: #FFFFFF;
-            border-left: 4px solid #FF8A8A;
-        }
-        .risk-medium { 
-            background-color: #C48A4A;
-            color: #111111;
-            border-left: 4px solid #FFE0B2; 
-        }
-        .risk-low { 
-            background-color: #4E6B4E;
-            color: #FFFFFF;
-            border-left: 4px solid #A5D6A7; 
-        }
+        .risk-high { background-color: #B33A3A; color: #FFFFFF; border-left: 4px solid #FF8A8A; }
+        .risk-medium { background-color: #C48A4A; color: #111111; border-left: 4px solid #FFE0B2; }
+        .risk-low { background-color: #4E6B4E; color: #FFFFFF; border-left: 4px solid #A5D6A7; }
         
         .glossary-section {
-            border: 1px solid rgba(128, 128, 128, 0.2);
-            border-top: 4px solid var(--naur-accent-risk);
-            background-color: rgba(128, 128, 128, 0.05);
-            border-radius: 6px;
-            padding: 1.5rem;
-            margin: 0.5rem 0;
-            font-size: 0.9rem;
-            color: inherit;
+            border: 1px solid rgba(128, 128, 128, 0.2); border-top: 4px solid var(--naur-accent-risk);
+            background-color: rgba(128, 128, 128, 0.05); border-radius: 6px; padding: 1.5rem; margin: 0.5rem 0; font-size: 0.9rem; color: inherit;
         }
-
-        .glossary-title {
-            font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.75rem;
-            margin-bottom: 1.25rem;
-            opacity: 0.7;
-        }
-        
-        .glossary-term {
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-top: 1rem;
-        }
-        
-        .glossary-definition {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            margin-top: 0.25rem;
-            opacity: 0.8;
-        }
+        .glossary-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; margin-bottom: 1.25rem; opacity: 0.7; }
+        .glossary-term { font-weight: 600; font-size: 0.9rem; margin-top: 1rem; }
+        .glossary-definition { font-size: 0.9rem; line-height: 1.6; margin-top: 0.25rem; opacity: 0.8; }
         
         [data-testid="stChatInput"]::after {
             content: "Naur enforces team alignment. Verify constraints before implementation.";
-            display: block;
-            text-align: center;
-            font-size: 0.75rem;
-            opacity: 0.5;
-            margin-top: 0.75rem;
-            pointer-events: none;
-            font-family: 'SuisseIntl', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+            display: block; text-align: center; font-size: 0.75rem; opacity: 0.5; margin-top: 0.75rem; pointer-events: none;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -202,22 +118,26 @@ with st.sidebar:
     st.markdown("<h1 style='margin-bottom: 0.2rem; font-size: 1.5rem;'>Naur</h1>", unsafe_allow_html=True)
     st.markdown('<p class="subtext">Align your team before you build.</p>', unsafe_allow_html=True)
 
+    st.markdown("<h3 style='font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;'>Governance Phase</h3>", unsafe_allow_html=True)
+    gov_phase = st.select_slider(
+        "Phase",
+        options=["Ideation Phase", "Architecture Phase", "Pre-Flight Gate"],
+        value="Architecture Phase",
+        label_visibility="collapsed"
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+
     st.markdown("<h3 style='font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;'>Context</h3>", unsafe_allow_html=True)
     global_context = st.text_area(
-        "Context",
-        key="global_context",
-        placeholder="e.g. AWS ECS. REST/JSON. Kafka.",
-        height=120,
-        label_visibility="collapsed",
+        "Context", key="global_context", placeholder="e.g. AWS ECS. REST/JSON. Kafka.",
+        height=120, label_visibility="collapsed",
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("<h3 style='font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;'>Role</h3>", unsafe_allow_html=True)
     role = st.selectbox(
-        "Role",
-        options=["Product Manager", "Frontend Engineer", "Backend Engineer", "Data Scientist", "UI/UX Designer"],
-        label_visibility="collapsed",
-        key="active_role"
+        "Role", options=["Product Manager", "Frontend Engineer", "Backend Engineer", "Data Scientist", "UI/UX Designer"],
+        label_visibility="collapsed", key="active_role"
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -237,21 +157,14 @@ global_summary = constraints.pop("GLOBAL", None) if constraints else None
 if constraints or global_summary:
     all_risks = list(constraints.values()) + ([global_summary] if global_summary else [])
     risk_priority = {"HIGH": 2, "MEDIUM": 1, "LOW": 0}
-    highest_risk = max(
-        (v.get("risk", "LOW") for v in all_risks if isinstance(v, dict)),
-        key=lambda r: risk_priority.get(r, 0),
-        default="LOW"
-    )
+    highest_risk = max((v.get("risk", "LOW") for v in all_risks if isinstance(v, dict)), key=lambda r: risk_priority.get(r, 0), default="LOW")
     
     risk_class = {"HIGH": "risk-high", "MEDIUM": "risk-medium", "LOW": "risk-low"}.get(highest_risk, "risk-low")
-    st.markdown(
-        f"<div class='risk-badge {risk_class}'>Alignment Risk: {highest_risk}</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown(f"<div class='risk-badge {risk_class}'>Alignment Risk: {highest_risk}</div>", unsafe_allow_html=True)
     
     if global_summary:
-        with st.expander("VIEW RISK RATIONALE", expanded=False):
-            clean_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', global_summary.get("text", "No rationale provided."))
+        with st.expander("RISK RATIONALE", expanded=False):
+            clean_text = parse_markdown(global_summary.get("text", "No rationale provided."))
             st.markdown(f"<div style='font-size: 0.95rem; line-height: 1.6;'>{clean_text}</div>", unsafe_allow_html=True)
 
 if constraints:
@@ -271,8 +184,7 @@ if constraints:
             for j in range(3):
                 if i + j < len(constraint_items):
                     domain, data = constraint_items[i + j]
-                    text = data.get("text", "No constraints detected.")
-                    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+                    text = parse_markdown(data.get("text", "No constraints detected."))
                     conf = domain_config.get(domain, {"name": domain, "class": "card-be"})
                     
                     cols[j].markdown(
@@ -286,27 +198,17 @@ if glossary:
     with st.expander("PROJECT DICTIONARY", expanded=False):
         terms_html = ""
         for term, definition in glossary.items():
-            clean_def = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', definition)
-            clean_def = clean_def.replace("In Project Naur, ", "").replace("Project Naur", "This project")
+            clean_def = parse_markdown(definition).replace("In Project Naur, ", "").replace("Project Naur", "This project")
+            terms_html += f"<div class='glossary-term'>{term}</div><div class='glossary-definition'>{clean_def}</div>"
             
-            terms_html += (
-                f"<div class='glossary-term'>{term}</div>"
-                f"<div class='glossary-definition'>{clean_def}</div>"
-            )
-            
-        st.markdown(
-            f"<div class='glossary-section'>"
-            f"{terms_html}"
-            f"</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div class='glossary-section'>{terms_html}</div>", unsafe_allow_html=True)
     
 st.markdown("<hr>", unsafe_allow_html=True)
-
 thread = sm.get_chat_history()
 
 for msg in thread:
     clean_content = re.sub(r' \[Context: .*?\]', '', msg["content"])
+    clean_content = re.sub(r' \[Phase: .*?\]', '', clean_content)
         
     if msg["role"] == "human":
         avatar_initials = "U"
@@ -317,13 +219,11 @@ for msg in thread:
         elif "[UI" in clean_content: avatar_initials = "UI"
 
         avatar_url = f"https://ui-avatars.com/api/?name={avatar_initials}&background=2A2A2A&color=E9DDCF&rounded=true&bold=true&font-size=0.4"
-
         with st.chat_message("human", avatar=avatar_url):
             st.markdown(f"<div class='chat-human'>{clean_content}</div>", unsafe_allow_html=True)
             
     elif msg["role"] == "assistant":
         naur_avatar = "https://ui-avatars.com/api/?name=N&background=C48A4A&color=111111&rounded=true&bold=true"
-        
         with st.chat_message("assistant", avatar=naur_avatar):
             st.markdown(f"<div class='chat-ai'>{clean_content}</div>", unsafe_allow_html=True)
 
@@ -335,7 +235,9 @@ if user_intent := st.chat_input("Join the discussion..."):
 
     global_context = st.session_state.get("global_context", "").strip()
     if global_context:
-        stamped_intent += f" [Context: {global_context}]"
+        stamped_intent += f" [Context: {global_context} | Phase: {gov_phase}]"
+    else:
+        stamped_intent += f" [Phase: {gov_phase}]"
 
     sm.append_message("human", stamped_intent)
     st.rerun()

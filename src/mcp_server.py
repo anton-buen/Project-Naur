@@ -11,148 +11,76 @@ Exposes the Project Naur SQLite state to external MCP-compatible agents
 Usage:
     python -m src.mcp_server
 """
-
 import asyncio
 import json
 import logging
-
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
-
 import src.state_manager as sm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("naur.mcp_server")
-
 app = Server("project-naur-engine")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
-    """Advertise the tools this server exposes to the connected MCP agent."""
     return [
         Tool(
             name="read_architecture_thread",
-            description=(
-                "Fetches the current cross-functional discussion thread from "
-                "the Project Naur ledger. Returns the full chat history as a "
-                "JSON-encoded list of {role, content} objects."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
+            description="Fetches current discussion thread from the ledger.",
+            inputSchema={"type": "object", "properties": {}, "required": []},
         ),
         Tool(
             name="update_domain_constraint",
-            description=(
-                "Writes or overwrites a technical constraint for a specific "
-                "architectural domain (PROD, FE, BE, DS, UI, or GLOBAL) and records its risk level. "
-                "Persists to the shared SQLite state so the UI dashboard reflects "
-                "the change immediately."
-            ),
+            description="Writes a constraint, its business translation, and risk level.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "domain": {
-                        "type": "string",
-                        "description": "Architectural domain: 'PROD', 'FE', 'BE', 'DS', 'UI', or 'GLOBAL'.",
-                        "enum": ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"],
-                    },
-                    "constraint_text": {
-                        "type": "string",
-                        "description": (
-                            "Human-readable description of the technical constraint, "
-                            "e.g. 'Must use React 18 with server-side rendering'."
-                        ),
-                    },
-                    "risk_level": {
-                        "type": "string",
-                        "description": "Alignment risk: 'HIGH', 'MEDIUM', or 'LOW'.",
-                        "enum": ["HIGH", "MEDIUM", "LOW"],
-                    },
+                    "domain": {"type": "string", "enum": ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"]},
+                    "constraint_text": {"type": "string", "description": "Technical engineering constraint."},
+                    "business_impact": {"type": "string", "description": "Non-technical translation outlining trade-offs, cost, or legal risk."},
+                    "risk_level": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]},
                 },
-                "required": ["domain", "constraint_text", "risk_level"],
+                "required": ["domain", "constraint_text", "business_impact", "risk_level"],
             },
         ),
         Tool(
             name="upsert_project_dictionary",
-            description=(
-                "Adds a new term or updates an existing term in the shared "
-                "Project Dictionary / ontological glossary. Persists to the "
-                "SQLite state so the UI reflects the change immediately."
-            ),
+            description="Adds a term to the glossary.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "term": {
-                        "type": "string",
-                        "description": "The term or concept to define.",
-                    },
-                    "definition": {
-                        "type": "string",
-                        "description": "The agreed-upon definition for that term.",
-                    },
+                    "term": {"type": "string"},
+                    "definition": {"type": "string"},
                 },
                 "required": ["term", "definition"],
             },
         ),
     ]
 
-
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Dispatch an incoming tool call to the appropriate state_manager handler."""
     if name == "read_architecture_thread":
-        logger.info("[TOOL CALL] read_architecture_thread")
-        history = sm.get_chat_history()
-        return [TextContent(type="text", text=json.dumps(history, ensure_ascii=False))]
-
+        return [TextContent(type="text", text=json.dumps(sm.get_chat_history(), ensure_ascii=False))]
     elif name == "update_domain_constraint":
-        domain: str = arguments.get("domain", "").strip().upper()
-        constraint_text: str = arguments.get("constraint_text", "").strip()
-        risk_level: str = arguments.get("risk_level", "LOW").strip().upper()
-
-        logger.info(
-            "[TOOL CALL] update_domain_constraint | domain=%s risk=%s",
-            domain, risk_level,
-        )
-
-        success = sm.update_constraint(domain, constraint_text, risk_level)
-        if success:
-            text = f"Success: Constraint for domain '{domain}' updated with risk level '{risk_level}'."
-        else:
-            text = f"Failure: Could not update constraint for domain '{domain}'. Check server logs."
-        return [TextContent(type="text", text=text)]
-
+        domain = arguments.get("domain", "").strip().upper()
+        text = arguments.get("constraint_text", "").strip()
+        biz = arguments.get("business_impact", "").strip()
+        risk = arguments.get("risk_level", "LOW").strip().upper()
+        success = sm.update_constraint(domain, text, biz, risk)
+        return [TextContent(type="text", text="Success" if success else "Failure")]
     elif name == "upsert_project_dictionary":
-        term: str = arguments.get("term", "").strip()
-        definition: str = arguments.get("definition", "").strip()
-
-        logger.info("[TOOL CALL] upsert_project_dictionary | term='%s'", term)
-
+        term = arguments.get("term", "").strip()
+        definition = arguments.get("definition", "").strip()
         success = sm.upsert_glossary_term(term, definition)
-        if success:
-            text = f"Success: Term '{term}' upserted into the Project Dictionary."
-        else:
-            text = f"Failure: Could not upsert term '{term}'. Check server logs."
-        return [TextContent(type="text", text=text)]
-
+        return [TextContent(type="text", text="Success" if success else "Failure")]
     else:
         raise ValueError(f"Unknown tool: '{name}'")
 
-
-async def main() -> None:
-    """Start the MCP server and serve requests over stdio."""
-    logger.info("[SERVER] project-naur-engine MCP server starting over stdio…")
+async def main():
     async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options(),
-        )
-
+        await app.run(read_stream, write_stream, app.create_initialization_options())
 
 if __name__ == "__main__":
     asyncio.run(main())
