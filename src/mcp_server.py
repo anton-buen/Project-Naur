@@ -23,8 +23,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("naur.mcp_server")
 app = Server("project-naur-engine")
 
+
 @app.list_tools()
 async def list_tools() -> list[Tool]:
+    """Return the list of tools exposed by this MCP server.
+
+    Returns:
+        A list of ``Tool`` descriptors for ``read_architecture_thread``,
+        ``update_domain_constraint``, and ``upsert_project_dictionary``.
+    """
     return [
         Tool(
             name="read_architecture_thread",
@@ -33,16 +40,25 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="update_domain_constraint",
-            description="Writes a constraint, its business translation, and risk level.",
+            description="Writes a constraint, its business translation, detailed explanation, and risk level.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "domain": {"type": "string", "enum": ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"]},
-                    "constraint_text": {"type": "string", "description": "Technical engineering constraint."},
-                    "business_impact": {"type": "string", "description": "Non-technical translation outlining trade-offs, cost, or legal risk."},
+                    "constraint_text": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Exactly 1-2 bullet points. STRICTLY NO meta-commentary.",
+                    },
+                    "business_impact": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Exactly 1-2 bullet points in 100% Layman terms. No meta-commentary.",
+                    },
+                    "deep_dive": {"type": "string", "description": "REQUIRED. Put long-form technical explanations here."},
                     "risk_level": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]},
                 },
-                "required": ["domain", "constraint_text", "business_impact", "risk_level"],
+                "required": ["domain", "constraint_text", "business_impact", "deep_dive", "risk_level"],
             },
         ),
         Tool(
@@ -59,28 +75,55 @@ async def list_tools() -> list[Tool]:
         ),
     ]
 
+
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Dispatch an incoming tool call to the appropriate state-manager function.
+
+    Args:
+        name: The registered tool name.
+        arguments: Key-value payload supplied by the MCP client.
+
+    Returns:
+        A single-element list containing a ``TextContent`` with ``"Success"``
+        or ``"Failure"`` as the text body.
+
+    Raises:
+        ValueError: If *name* does not match any registered tool.
+    """
     if name == "read_architecture_thread":
         return [TextContent(type="text", text=json.dumps(sm.get_chat_history(), ensure_ascii=False))]
+
     elif name == "update_domain_constraint":
         domain = arguments.get("domain", "").strip().upper()
-        text = arguments.get("constraint_text", "").strip()
-        biz = arguments.get("business_impact", "").strip()
+
+        t_data = arguments.get("constraint_text", [])
+        text = "\n".join([f"- {t}" for t in t_data]) if isinstance(t_data, list) else str(t_data)
+
+        b_data = arguments.get("business_impact", [])
+        biz = "\n".join([f"- {b}" for b in b_data]) if isinstance(b_data, list) else str(b_data)
+
+        deep = arguments.get("deep_dive", "").strip()
         risk = arguments.get("risk_level", "LOW").strip().upper()
-        success = sm.update_constraint(domain, text, biz, risk)
+
+        success = sm.update_constraint(domain, text, biz, deep, risk)
         return [TextContent(type="text", text="Success" if success else "Failure")]
+
     elif name == "upsert_project_dictionary":
         term = arguments.get("term", "").strip()
-        definition = arguments.get("definition", "").strip()
-        success = sm.upsert_glossary_term(term, definition)
+        defn = arguments.get("definition", "").strip()
+        success = sm.upsert_glossary_term(term, defn)
         return [TextContent(type="text", text="Success" if success else "Failure")]
+
     else:
         raise ValueError(f"Unknown tool: '{name}'")
 
-async def main():
+
+async def main() -> None:
+    """Start the MCP server and run until the stdio streams close."""
     async with stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
+
 
 if __name__ == "__main__":
     asyncio.run(main())
