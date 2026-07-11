@@ -9,7 +9,8 @@ DB_FILE = BASE_DIR / "naur_state.db"
 
 def get_connection():
     """Returns a connection to the SQLite database."""
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+    # Added timeout=15.0 to handle Bob's parallel asynchronous tool calls
+    conn = sqlite3.connect(DB_FILE, check_same_thread=False, timeout=15.0)
     conn.row_factory = sqlite3.Row
     return conn
 
