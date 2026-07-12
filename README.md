@@ -7,69 +7,51 @@
 
 **The Friction: The Alignment Tax.**
 
-When building software in teams, the biggest slowdown isn't writing code. It is mutual misunderstanding. A product manager asks for a "basic login" feature while the designer pictures a quick social-auth flow. Meanwhile, the backend engineer stresses over token expiration and database latency. Because multidisciplinary domains speak entirely different professional dialects, they pay a massive, hidden productivity penalty. Let’s call it the **Alignment Tax.**
+When building in teams, the biggest drag isn’t writing code. It is mutual misunderstanding. A product manager asks for a “basic login” feature, while the designer envisions a quick social auth flow. Meanwhile, the backend engineer stresses over token expiration and database latency. Because multidisciplinary domains just speak entirely different professional dialects, they pay a massive, often overlooked, productivity penalty. Let’s call it the Alignment Tax.
 
-To be completely fair, I stole this term from AI safety. In machine learning, it refers to the performance or speed penalty you pay to keep a model aligned with human values. Here, I am repurposing it to describe human-to-human communication friction.
+I misappropriated this term from AI safety. In machine learning, it refers to the performance or speed penalty you pay to keep a model aligned with human values. Here, I am repurposing it to describe human-to-human communication friction instead.
 
-This communication gap creates Comprehension Debt—a playful, slightly dramatic riff on "Technical Debt." It describes the cost of people failing to understand each other. The illusion of agreement masks entirely disjointed mental models. That debt eventually comes due during integration week, resulting in painful late-stage rewrites, broken databases, or abandoned pull requests
+This communication gap creates Comprehension Debt, a playful, slightly dramatic take on “Technical Debt.” It describes the cost of people failing to understand each other. The illusion of agreement masks entirely disjointed mental models. That debt eventually comes due during, say, integration week, resulting in painful late-stage rewrites, broken databases, or abandoned pull requests.
 
 **The Gap in Modern Workflows**
 
-Current workflows rely heavily on autonomous coding agents to write boilerplate faster. However, accelerating code generation without addressing human alignment simply helps a team build the wrong software at a higher speed. If you don't write the theory of the software first, the code is just an expensive shadow of a broken model. Naur handles this friction upstream.
+Current workflows rely heavily on autonomous agents to write faster. However, accelerating code generation without addressing the actual human alignment simply helps a team build the wrong software faster. If you don’t write the theory of the software first, the code is just an expensive shadow of an already broken model. Naur handles this friction upstream.
 
 **The Solution**
 
-I designed Naur to act as an autonomous organizational linter that enforces Domain-Driven Design (DDD) constraints before a single line of execution code is ever written. Instead of building another disruptive chatbot, .
+Naur acts as an automated organizational checker that enforces Domain-Driven Design (DDD) constraints before anyone writes execution code. Okay, calling it an Ontological Linter is peak hackathon showmanship. It isn’t a static compiler tool analyzing the nature of existence; it’s a specialized LLM prompt strategy that runs quietly in the background as a Model Context Protocol (MCP) server that plugs directly into a team’s active communication stream. It flags, for example, when two people use the same word to mean different things.
 
-Naur acts as an automated organizational checker that enforces Domain-Driven Design (DDD) constraints before anyone writes execution code. Let’s be real: calling it an Ontological Linter is peak hackathon showmanship. It isn't a static compiler tool analyzing the nature of existence; it is a specialized LLM prompt strategy that runs quietly in the background as a Model Context Protocol (MCP) server that plugs directly into a team's active communication stream and flags for example, when two people use the same word to mean different things.
+It builds and forces cross-disciplinary empathy by executing three continuous architectural checks:
 
+The Missing Chair: Inspired by Jeff Bezos’s old trick of leaving an empty chair at the table to represent the customer, this sounds like a complex architectural rule. Under the hood, it is a straightforward IF/THEN checking who is active in the chat. If engineering and product make UI choices without a designer present, Naur steps in to advocate for that missing role/s.
 
-It builds cross-disciplinary empathy by executing three continuous architectural checks:
+Ubiquitous Language (DDD): It catches terminology collisions. If an engineer and a product manager use the word “cache” differently, the system flags it and normalizes the definition into a centralized project glossary.
 
-**The Missing Chair:** Inspired by Jeff Bezos’s old trick of leaving an empty chair at the table to represent the customer, this sounds like a complex architectural rule. Under the hood, it is a straightforward IF/THEN statement checking who is active in the chat. If engineering and product make UI choices without a designer present, Naur steps in to advocate for that missing discipline.
-
-**Ubiquitous Language (DDD):** It catches terminology collisions. If an engineer and a product manager use the word "cache" differently, the system flags it and normalizes the definition into a centralized project glossary.
-
-**3-Tiered Translation:** When a risky proposal surfaces, Naur intercepts it to evaluate what might break. I call this "calculating the cross-domain blast radius," but the LLM is simply making an educated guess based on the context. It translates the proposal into three views: precise technical requirements, a deep-dive rationale, and jargon-free business impacts.
+3-Tiered Translation: When a risky proposal surfaces, Naur intercepts it to evaluate what might break. I call this “calculating the cross-domain blast radius,” but the LLM is simply making an educated guess based on the context. It translates the proposal into three views: 1. precise technical requirements, 2. a deep-dive rationale, and 3. jargon-free business impacts.
 
 
-
-The ultimate goal is to force shared understanding across domains, ensuring that whether a human or an AI agent ultimately writes the code, the underlying structural blueprint is "actually correct".
+**The ultimate goal is to force shared understanding across domains, ensuring that whether a human or an AI agent ultimately writes the code, the underlying structural blueprint is “actually correct”. Any change or addition moving forward is also forced to be understood across said domains.**
 
 ---
 
 ### 2. What did IBM Bob do?
 
-I relied heavily on IBM Bob to engineer this prototype. It essentially served a dual purpose: acting as my strict principal architect during the build phase, and operating as the runtime orchestration engine in the live application.
+I didn’t use IBM Bob as a generic autocomplete tool; I deployed it with highly deterministic, strict prompts to handle the architectural heavy lifting. To enforce Peter Naur's principles, I initially configured Bob as a strict "Principal Systems Architect" bound by a **Mandatory Intervention Trigger**—forcing it to halt code generation and demand a 4-point scaffold (Goal, State, Feedback, Blast Radius) if I ever asked for complex logic without defining boundaries. With these **3 In-Memory Gates** (*Where does state live? Where does feedback live? What breaks?*) established, Bob operated across four distinct roles during the build:
 
-**Phase 1: Architectural Planning & The Build Persona**
+**Phase 1: The Database & State Refactor**
+Halfway through the build, I realized a flat JSON file wouldn't survive concurrent agent operations, so I migrated the backend to SQLite. I deployed Bob to completely rewire the Streamlit frontend (`app.py`) to connect to the new `state_manager.py` API. Bob refactored the sidebar to drop the old dictionary logic, replacing it with a clean `sm.clear_ledger()` and `st.rerun()` loop. It then pulled the constraints and project dictionary out of the chat loop entirely, creating the "Global Alignment Dashboard" that renders the Risk Badge and Tech Cards persistently at the top of the screen.
 
-During the initial planning phase, I used Plan Mode to define Bob's system persona. I didn't want a yes-man autocomplete tool; I wanted a strict mentor. I configured Bob as a "Principal Systems Architect" operating under Peter Naur's principles. I gave it a few hard constraints:
+**Phase 2: The UI & Aesthetic Engineer**
+I have a very specific vision for the Naur interface, and I used Bob to execute the CSS without having to wrestle with Streamlit's native layout limitations. I gave Bob exact hex codes and typography rules to rewrite the `apply_adaptive_theme()` function. Bob applied specific accents for the UI cards (e.g., `#6B4A3A` for Frontend, `#A3A08E` for Data Science) and warmed up the muted text with `#E9DDCF`. It also successfully wrote the CSS to keep all headers in a sans-serif font while reverting the chat inputs, message bubbles, and tech-card bodies to a strict monospace font (`JetBrains Mono` / `IBM Plex Mono`).
 
-* **The Mandatory Intervention Trigger:** If I asked Bob to write complex logic without defining architectural boundaries, it was instructed to strictly refuse, halt the conversation, and force me to fill out a 4-point scaffold (Goal, State, Feedback, Blast Radius).
-* **The 3 In-Memory Gates:** To make the prompt design sound cooler, I named these "in-memory gates." In reality, they are not low-level hardware or server architecture constraints. They are three literal text questions (Where does state live? Where does feedback live? What breaks if I delete this?) that I forced the LLM to answer before generating code.
+**Phase 3: The Ruthless Code Reviewer**
+Before finalizing the prototype, the codebase was filled with hackathon clutter—commented-out legacy code, inline developmental notes, and "FIXME" tags. I prompted Bob to act as a Senior Code Reviewer with strict constraints: make zero logic alterations and zero UI modifications. Bob stripped all the developmental clutter and enforced clean, concise Python docstrings across every major function and class to ensure professional polish.
 
-**Phase 2: Core Engineering (Agent Mode)**
+**Phase 4: The Runtime Linter**
+In the live application, Bob ceases to be the developer and becomes the product itself. Operating under the prompt *"Bob, please review the architecture thread and extract any constraints,"* Bob transitions into the autonomous Ontological Linter. It pulls the exact chronological chat thread, calculates the cross-domain blast radius, and fires parallel database mutations to rewrite project constraints directly from the IDE.
 
-With the boundaries set, I switched over to Agent Mode for the actual engineering work:
-
-* **State Persistence:** I had Bob build the state manager to handle the SQLite layer. It generated three distinct tables and the core functions required to manage concurrent reads and writes safely.
-* **Protocol Wiring:** I utilized Bob's specific `build-mcp-server` skill to architect the stdio transport setup and register my custom tools. I then activated the `configure-mcp` skill to map the custom server into the local project file (`.bob/mcp.json`), making sure the execution command pointed exactly to my local Python binary.
-* **Frontend Execution:** Bob wrote the Streamlit presentation layer. It engineered a custom Markdown parser to bypass native rendering limits and implemented a "zero-latency translation toggle." basically a classic frontend trick: using a pure CSS checkbox hack (:checked) to hide and show HTML elements without waiting for server-side JS.
-
-**Phase 3: The Runtime Engine (The Live Persona)**
-
-In the final production prototype, IBM Bob transitions into the core logic engine of the tool itself. I swapped the system instructions to act as the "Ontological Linter," enforcing the "Missing Chair" logic and the three dynamic governance tiers. Because the configuration is tied directly to the local workspace, Bob operates as the autonomous linter. When you hit sync in the UI, Bob reads the ledger and fires parallel database mutations to rewrite project constraints directly from the IDE.
-
-**Summary of Bob's Technical Contributions**
-
-| Component | Engineering Task | Mode / Skill Used |
-| --- | --- | --- |
-| **Build Architecture** | Enforced the 3 In-Memory Gates and the Mandatory Intervention Trigger to prevent bad code. | `Plan` / System Authoring |
-| **Persistence Ledger** | Built `state_manager.py` with idempotent table creation and locking buffers. | `Agent` |
-| **MCP Server** | Built `mcp_server.py` and enforced strict JSON array schema typing to prevent hallucinations. | `Agent` / `build-mcp-server` |
-| **MCP Registration** | Wired the `.bob/mcp.json` file to the local Python subprocess environment. | `Agent` / `configure-mcp` |
-| **Presentation UI** | Wrote `app.py`, custom CSS layout engine, Markdown parser, and state sync. | `Agent` |
+**Skills Used**
+To wire this all together, I relied explicitly on two of Bob's native workspace skills. The `build-mcp-server` skill was utilized to provide the exact `mcp` Python SDK v2 API pattern—including the `Server()`, `@app.list_tools()`, the `stdio_server` context manager, and the `asyncio.run()` entrypoint. Without this, the MCP server structure would not have followed the correct protocol. I then used the `configure-mcp` skill to generate the `.bob/mcp.json` schema. This provided the exact command, arguments, and `${workspaceFolder}` variable syntax required to ensure the custom server registered seamlessly to the Bob IDE without manual debugging.
 
 ---
 
@@ -96,9 +78,8 @@ Analysis: It evaluates the active personas to figure out if any vital roles are 
 
 Execution: The agent dispatches parallel tool calls to update the domain constraints and the project dictionary.
 
-**Schema Defense:** 
+To keep the system acting as an objective data pipeline, I programmed the MCP server to enforce strict JSON array schemas on all AI tool inputs. This physically blocks the language model from hallucinating or injecting conversational commentary (e.g., “Here are the constraints you asked for:”) into the production database. If it doesn’t fit the array, it gets rejected.
 
-To keep the system acting as an objective data pipeline, I programmed the MCP server to enforce strict JSON array schemas on all AI tool inputs. This physically blocks the language model from hallucinating or injecting conversational commentary (e.g., "Here are the constraints you asked for:") into the production database. If it doesn't fit the array, it gets rejected.
 
 **Architecture Diagram & System Flow**
 
@@ -211,41 +192,34 @@ To see the autonomous linter in action, follow this exact loop:
 
 
 4. **State Synchronization:** Wait for Bob to finish calling the parallel MCP tools and declare "Loop Complete." Return to the Streamlit UI and click the **Sync** button in the sidebar.
+
 5. **Review:** The UI instantly ingests the database mutations, rendering the updated multi-domain blast radius, the 3-tiered constraint translations, and any newly captured project glossary terms.
 
-**State Reset**
+**State Sync**
+If IBM Bob is still executing its observation loop in the background, you can click the **Sync** button in the Streamlit sidebar at any time to fetch the latest database mutations. *Note:* I intentionally limited Bob's execution prompt to exactly two iterations. This gives the agent just enough cycles to double-check its own reasoning and outputs, while strictly budgeting our Bobcoin expenditure.
 
-If the SQLite ledger accumulates too much test data, click the **Clear** button in the Streamlit sidebar. This triggers `clear_ledger()`, performing a clean transaction wipe of all three database tables instantly without requiring a server restart or crashing the application state.
+**State Reset**
+If the SQLite ledger accumulates too much chat history or test data, simply click the **Clear Ledger** button in the sidebar. This triggers `sm.clear_ledger()`, performing a clean transaction wipe across all three database tables instantly. It safely resets the application state without requiring a server restart or crashing the frontend UI.
 
 
 ### 5. "Future of Work"?
 
-The Wildcard category demands intelligent systems that rethink the future of work, focusing on workflow automation, AI co-workers, and decision intelligence. Naur hits this theme by shifting the focus from how fast we work to how clearly we think.
+The Wildcard category demands intelligent systems that rethink the future of work. Naur hits this theme by shifting the focus from how fast we work to how clearly we think and communicate.
 
-**Execution Velocity vs. Decision Intelligence**
+Most modern AI tools focus entirely on speed or efficiency, helping developers write code faster or autocomplete lines. However, development is rarely bottlenecked by typing speed. It is bottlenecked by human misalignment.
 
-Most modern AI tools focus entirely on speed—helping developers write boilerplate code faster or autocomplete lines. However, software development is rarely bottlenecked by typing speed. It is bottlenecked by human misalignment.
+Naur focuses entirely on clear coordination and communication. It serves as an automated organizational checkpoint that ensures product, engineering, and design teams are synced before any execution begins. It even enforces this during and after the execution. By forcing teams to resolve their communication gaps upstream, Naur prevents teams from using AI to simply build the wrong software at a higher speed.
 
-Naur focuses entirely on clear coordination. It serves as an automated organizational checkpoint that ensures product, engineering, and design teams are synced before execution begins. By forcing teams to resolve their communication gaps upstream, Naur prevents teams from using AI to simply build the wrong software at a higher speed.
-
-**Enterprise Readiness via MCP**
-
-Integrating Naur directly as a Model Context Protocol (MCP) server—rather than forcing teams to adopt another standalone web dashboard—projects true production readiness. 
-* **Zero Friction:** It integrates seamlessly directly inside the IDE environments developers are already using.
-* **Structural Safety:** It replaces standard, chaotic chat logs with heavily typed, deterministic architectural governance. 
-
-Naur demonstrates how future AI co-workers can step away from being passive text-generation tools and become active, structural defenders of system integrity.
-
----
 
 ### 6. Future Roadmap
 
-Right now, the prototype orchestrates local state via standard input and output through the IDE, requiring manual execution prompts for every sync. My roadmap focuses on shifting Naur from a manual tool into a fully automated, ambient daemon that permanently protects teams from **Comprehension Debt**.
+Right now, Naur operates locally and requires a developer to manually trigger the alignment checks. The ultimate vision is to make Naur completely invisible and autonomous: an ambient layer of the development process that catches Comprehension Debt before it ever reaches production.
 
-*   **Autonomous Background Daemon (Zero-Prompting):** I want to upgrade Naur into a continuous background process. Instead of a developer having to manually paste initialization prompts into the Bob interface, the daemon will actively monitor the `chat_ledger`. The moment a team member proposes complex functional logic without clear boundaries, Naur will autonomously fire a **Mandatory Intervention Trigger** directly into the communication stream, halting the conversation until the 4-point Architectural Scaffold is settled.
-*   **CI/CD Pre-Flight Enforcement:** I plan to build Naur into a GitHub Action that evaluates incoming Pull Requests against our **3 Continuous In-Memory Gates**. Before code can merge, Naur will audit the diff to verify: *Where does state live? Where does feedback live? What breaks if I delete this?* If a PR touches multiple domains without an agent-validated constraint logged during the architecture phase, the build will automatically fail, stopping unaligned code from polluting production.
-*   **Bidirectional Tracker Sync (Jira & Linear):** I aim to bridge the gap between architectural chatter and actual project management. Naur will automatically map out the calculated blast radius of a slack or chat discussion and synchronously update targeted issue tracking tickets with explicit engineering requirements, technical rationales, and jargon-free business impacts.
-*   **Multi-Agent Adversarial Debate Protocol:** For highly volatile proposals, I want to explore a decentralized debate layer. This phrase sounds incredibly high-tech, but under the hood, it just means prompting two different LLMs with opposing instructions—like a grumpy security engineer and a fast-moving product manager—and letting them bicker back and forth until they find common ground. This text debate will run in the background before synthesizing a unified, solid global architectural state for the human team.
+*   **Invisible Orchestration (Zero-Prompting):** Moving away from manual triggers, Naur will run as a continuous background process. It will passively observe team chats and only intervene when it detects a high-risk architectural blind spot, automatically pausing the conversation to force alignment before the team moves forward.
+*   **The Alignment Gatekeeper (CI/CD):** Naur will integrate directly into code review pipelines (like GitHub Actions). If a developer submits code that impacts multiple domains (e.g., UI and Database), but the team never actually agreed on the cross-domain constraints during the planning phase, Naur will flag the pull request. It stops misaligned code from merging.
+*   **Syncing Chat to Project Tickets:** Teams talk in chat apps but work in tools like Jira or Linear. Naur will bridge this gap by automatically translating complex chat debates into clear, actionable engineering requirements and syncing them directly to the active project management tickets. 
+*   **Automated Stress Testing (Multi-Agent Debate):** For highly volatile or risky proposals, Naur will spin up multiple AI personas—like a strict security engineer and a fast-moving product manager—and have them debate the idea in the background. They will pressure-test the concept from different angles and present a unified, safe architectural recommendation to the human team.
+
 ---
 
 ### 7. Team & License
@@ -262,7 +236,7 @@ Right now, the prototype orchestrates local state via standard input and output 
 
 ### 8. Project Evolution & History
 
-Naur is the result of rigorous architectural iteration and structural pivots. To explore the complete history of how this system evolved from its original concept into its current deterministic MCP protocol, you can review the original build documentation here:
+Great software is discovered through trial, error, and a stubborn belief that teams can always find a better way to work together. Naur is the proud result of those necessary failures and architectural pivots. If you want to explore the journey of how this tool evolved from a raw, ambitious concept into the deterministic MCP protocol it is today, you can read the original build history here:
 
 **[Explore how it evolved](https://github.com/anton-buen/cognitive-alignment-engine)**
 
