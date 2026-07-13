@@ -246,7 +246,7 @@ def apply_adaptive_theme() -> None:
         .glossary-term { font-weight: 600; font-size: 0.9rem; margin-top: 1rem; }
         .glossary-definition { font-size: 0.9rem; line-height: 1.6; margin-top: 0.25rem; opacity: 0.8; }
         
-        [data-testid="stChatInput"]::after { content: "Naur translates the jargon. Check your constraints before you code."; display: block; text-align: center; font-size: 0.75rem; opacity: 0.5; margin-top: 0.75rem; pointer-events: none; }
+        [data-testid="stChatInput"]::after { content: "Naur enforces team alignment. Check your constraints before you code."; display: block; text-align: center; font-size: 0.75rem; opacity: 0.5; margin-top: 0.75rem; pointer-events: none; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -255,7 +255,7 @@ apply_adaptive_theme()
 
 with st.sidebar:
     st.markdown("<h1 class='brand-title'>Naur</h1>", unsafe_allow_html=True)
-    st.markdown('<p class="subtext">Align your team without the friction.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="subtext">Align your team, skip the friction.</p>', unsafe_allow_html=True)
 
     st.markdown("<h3 style='font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-top: 1rem;'>Role</h3>", unsafe_allow_html=True)
     role = st.selectbox("Role", options=["Product Manager", "Frontend Engineer", "Backend Engineer", "Data Scientist", "UI/UX Designer"], label_visibility="collapsed", key="active_role")
@@ -287,8 +287,8 @@ current_date = datetime.now().strftime("%A, %b %d, %Y")
 st.markdown(f"""
 <div style="margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(128,128,128,0.2); display: flex; justify-content: space-between; align-items: flex-end;">
     <div>
-        <h2 style='margin-top: 0; margin-bottom: 0.25rem; font-size: 1.5rem;'>Workspace</h2>
-        <p class="subtext" style="margin-bottom: 0;"> Drive smarter conversations. Clarify terms and identify risks.</p>
+        <h2 style='margin-top: 0; margin-bottom: 0.25rem; font-size: 1.5rem;'>ProjectName_1</h2>
+        <p class="subtext" style="margin-bottom: 0;">Your message here: clarify + identify</p>
     </div>
     <div style="text-align: right;">
         <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; opacity: 0.5;">Session Date</div>
