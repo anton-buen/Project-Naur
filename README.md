@@ -23,7 +23,7 @@ However, this creates a massive drag during the planning and development phases.
 
 >**A Gap in Modern Workflows**
 >
->Current industry workflows rely heavily on autonomous AI agents to generate code faster. However, accelerating code output without addressing underlying human alignment simply helps a team build the wrong software at record speeds. If you haven’t co-authored the theory of >the software first, the generated code is just an expensive shadow of a broken model. Naur intercepts this friction upstream.
+>Current industry workflows rely heavily on autonomous AI agents to generate code faster. However, accelerating code output without addressing underlying human alignment simply helps a team build the wrong software at record speeds. If you haven’t co-authored the theory of the software first, the generated code is just an expensive shadow of a broken model. Naur intercepts this friction upstream.
 >
 <br> 
 
@@ -90,19 +90,19 @@ Instead of dumping a wall of text into the chat, the AI synthesizes its backgrou
 I wanted to genuinely stress-test the workspace and file-coordination capabilities of IBM Bob. Instead of relying on the easy path of the "Recommended technologies" (like pre-built LangFlow or watsonx pipelines), I undertook a tedious, highly customized local configuration to leverage Bob as the backbone for my local MCP server.  I discovered that Bob has highly reliable capability to coordinate and reason across an entire codebase during development without breaking existing structure:
 
 <br> <br> 
-**1: Database & State Refactor**
+**1: Database & State Refactor** — 
 Halfway through the build, I realized a flat JSON file wouldn't survive concurrent agent operations. I deployed Bob to completely rewire the Streamlit frontend (`app.py`) to connect seamlessly to a new transactional SQLite `state_manager.py` API without introducing a single regression. Bob successfully refactored the state persistence layer to decouple the active chat history loop from the presentation logic entirely. This allowed the application to dynamically pull computed metrics out of the SQLite ledger and render the Alignment Risk Score, Blast Radius Badges, and Domain Constraint Cards persistently at the top of the screen.
 
-**2: UI**
+**2: UI** — 
 I used Bob to execute the CSS without having to wrestle with Streamlit's native layout limitations. I gave it exact hex codes and typography rules to rewrite the `apply_adaptive_theme()` function. 
 
-**3: Code Polish**
+**3: Code Polish** — 
 I prompted Bob to act as a ruthless Code Reviewer with strict parameters: make zero logic or UI alterations, but strip out all development clutter, legacy test strings, and inline "FIXME" tags while enforcing clean Python docstrings across the final codebase.
 
 
 >***Because Naur's entire mission is to enforce omnidirectional understanding across entirely different domains, this exact architectural governance edge made Bob a sufficient engine. It proved that Bob was more than capable of acting as the live, autonomous context brain that orchestrates Naur at runtime***
 
-**4: Runtime**
+**4: Runtime** — 
 Naur uses IBM Bob as the live processing brain. Under a strict, deterministic prompt routine, Bob processes incoming communication logs from the state engine, isolates the cross-disciplinary domain boundaries, dispatches parallel tool mutations back to the database, and builds the single source of truth dashboard
 <br> <br> 
 
@@ -121,38 +121,47 @@ I made Naur with a clear separation of concerns. The frontend presentation layer
 | **Logic Engine** | **IBM Bob** | The core AI model. Reads architectural threads, evaluates cross-domain friction, and fires tool parameters back to the persistence layer. |
 
 <br> <br> 
-**AI Integration: The Agentic Control Plane**
-
 **AI Integration: The Human-in-the-Loop Control Plane**
 I wanted to push past the standard generative chatbot model. Naur utilizes agentic AI as an active, on-demand architectural validator rather than a simple text summarizer. Because this is a localized proof of concept, the orchestration engine relies on a human-in-the-loop trigger. Once initialized by the developer within the IDE workspace, the local agent executes a highly deterministic reasoning cycle:
-* **Intake:** It targets and pulls the exact, chronological communication log from the ledger via the MCP server tool (`read_architecture_thread`), which runs a direct `SELECT * FROM chat_ledger` query.
-* **Analysis:** It evaluates the active personas to determine if any vital engineering roles were missing from the conversation (The Missing Chair logic).
-* **Execution:** The agent dispatches parallel tool calls (`update_domain_constraint`, `upsert_project_dictionary`) with explicitly typed parameters back through the server. The MCP server converts these payloads into atomic `INSERT OR REPLACE` mutations to update domain constraints and log definitions instantly.
+* **Intake** —  It targets and pulls the exact, chronological communication log from the ledger via the MCP server tool (`read_architecture_thread`), which runs a direct `SELECT * FROM chat_ledger` query.
+* **Analysis**  —  It evaluates the active personas to determine if any vital engineering roles were missing from the conversation (The Missing Chair logic).
+* **Execution** —  The agent dispatches parallel tool calls (`update_domain_constraint`, `upsert_project_dictionary`) with explicitly typed parameters back through the server. The MCP server converts these payloads into atomic `INSERT OR REPLACE` mutations to update domain constraints and log definitions instantly.
 
+To maintain an extremely lightweight messaging bus between the UI and the MCP server, meta-tags for active user roles and governance rules are stamped directly into the raw text payloads of the `chat_ledger`. The processing engine parses these structural prefixes at runtime to evaluate context constraints, and the presentation layer strips them out seamlessly via regular expressions immediately before rendering the historical chat bubbles back to the browser.
 <br> <br> 
 **Architecture Diagram & System Flow**
 
 This maps the live synchronization flow between the human interface, the database state, the protocol server, and the IDE linter.
-
-<br><br>
-<img width="3600" height="2563" alt="image" src="https://github.com/user-attachments/assets/14d493b6-5a14-4e98-9f90-19d287c354a5" />
 <br>
 ```text
-[ Team Member ] ➔ [ app.py (Streamlit) ] ➔ (append_message) ➔ [ naur_state.db (SQLite) ]
-       │                                                                  ▲
-       │ (Clicks "Sync")                                                  │
-       ▼                                                           (SQL Read/Write)
-[ app.py (Streamlit) ] ➔ (get_constraints) ──────────────────────────────┘
-       ▲
-       │ (Returns JSON Context / Tool Calls)
-       ▼
-[ src/mcp_server.py (stdio) ] ◄──────────────────────────────────────────┐
-       ▲                                                                 │
-       │ (Invokes tools: read_architecture_thread,                       │
-       │  update_domain_constraint, upsert_project_dictionary)           │
-       ▼                                                                 ▼
-[ Bob (Claude) (VS Code) ] ──────────────────────────────────────────────┘
-
+[ Team Member ] ➔ [ app.py (Streamlit UI) ]
+                               │
+               (Calls append_message, get_constraints)
+                               │
+                               ▼
+                   [ src/state_manager.py ]
+                               │
+                        (SQL Read/Write)
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               Persistence: naur_state.db (SQLite)               │
+└─────────────────────────────────────────────────────────────────┘
+                               ▲
+                        (SQL Read/Write)
+                               │
+                   [ src/state_manager.py ]
+                               ▲
+                 (Executes sm.update_constraint())
+                               │
+                 [ src/mcp_server.py (stdio) ]
+                               ▲
+                  (Invokes Tools via stdio / MCP)
+                               │
+┌──────────────────────────────┴──────────────────────────────────┐
+│                   IBM Bob Agent (VS Code)                       │
+│    (Persona: .bob/system.md | Registration: .bob/mcp.json)      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 <br>
 
@@ -225,23 +234,26 @@ type a technical proposal into the chat box, and submit the message.
   3.2. **AI Step:** Switch to your IDE and open the IBM Bob chat interface. To initialize the
   linter's exact reasoning constraints, submit this initial execution prompt with the **MCP and read permissions**:
 <br><br><br>
-<img width="307" height="1020" alt="IDE MCP Setup Verification" src="https://github.com/user-attachments/assets/78b940b9-ce48-4182-a9f0-edf189e5afde" /> <img width="326" height="542" alt="Bob Orchestration Panel" src="https://github.com/user-attachments/assets/1fe8c222-5a96-4b46-a191-ad201299b4ce" />
+<img width="507" height="1001" alt="IDE MCP Setup Verification" src="https://github.com/user-attachments/assets/4f295490-bf88-47ca-8694-5be5ea11ebfa" /> <img width="326" height="542" alt="Bob Orchestration Panel" src="https://github.com/user-attachments/assets/1fe8c222-5a96-4b46-a191-ad201299b4ce" />
+
+
 
 
 <br>
 <br>
 
-> "Bob, act as the Agentic Linter and Principal Architect for Project Naur. Execute the following observation loop exactly 2 times, pausing for 10 seconds between each iteration. After the 2nd iteration, halt completely and explicitly say 'Loop Complete.'
->
->Action Chain:
->1. Invoke read_architecture_thread to fetch the JSON thread.
->2. Analyze new messages for risks across ALL five domains.
->3. If technical friction exists, invoke update_domain_constraint using separate tool calls for each affected domain (e.g., pass 'FE' for Frontend, 'BE' for Backend along with your engineering requirements and business impacts).
->4. You MUST execute a separate tool call to update_domain_constraint with the domain parameter explicitly set to 'GLOBAL' to log the master rationale.
->5. If vague buzzwords exist, invoke upsert_project_dictionary with the exact term and its normalized definition."
+```
+ "Bob, act as the Ontological Linter and Principal Architect for Project Naur. Execute the following observation loop exactly 2 times, pausing for 10 seconds between each iteration. After the 2nd iteration, halt completely and explicitly say 'Loop Complete.'
 
+Action Chain:
+1. Invoke read_architecture_thread.
+2. Analyze new messages for risks across ALL five domains (FE, BE, DS, UI, PROD).
+3. If technical friction exists, invoke update_domain_constraint (Separate tool call for each domain using the arguments: text, business_impact, deep_dive, risk_level).
+4. You MUST execute a separate tool call to update_domain_constraint with the domain set to 'GLOBAL' for the rationale.
+5. If vague buzzwords exist, invoke upsert_project_dictionary." 
+```
 
-  3.3 **Sync Step** Wait for Bob to finish calling the parallel MCP tools and declare "Loop Complete." Return to the Streamlit UI and click the **Sync** button in the sidebar.
+  3.3 **Sync Step** Wait for Bob to finish calling the parallel MCP tools and declare "Loop Complete." Return to the Streamlit UI and click the **SYNC** button in the sidebar.
 
 
   3.4. **Continue Thread?** If you are continuing an existing thread and simply want Bob to re-evaluate new messages without burning unnecessary Bobcoins on the full prompt:
@@ -258,7 +270,7 @@ type a technical proposal into the chat box, and submit the message.
 >
 >
 **State Reset**
-If the SQLite ledger accumulates too much chat history or test data, simply click the **Clear Ledger** button in the sidebar. This triggers `sm.clear_ledger()`, performing a clean transaction wipe across all three database tables instantly.
+If the SQLite ledger accumulates too much chat history or test data, simply click the **CLEAR** button in the sidebar. This triggers `sm.clear_ledger()`, performing a clean transaction wipe across all three database tables instantly.
 
 <br><br>
 
@@ -304,6 +316,15 @@ Per the guidelines, I am delivering this project as a **working prototype and pr
 >
 >
 <br>
+
+### The Prompt Trade-Off:
+Building an AI agent that evaluates *other* architecture creates a unique context-window challenge. During development, I put IBM Bob through 20+ distinct prompt iterations to try and perfectly sterilize its output. 
+
+Because I commanded the agent to run a two-pass validation loop, the LLM constantly wanted to break the fourth wall and narrate its own execution (e.g., writing *"Iteration 2 analysis..."* into the database). I discovered that aggressively locking down the model with strict negative constraints (*"DO NOT mention iterations," "DO NOT define your own rules"*) successfully stopped the context bleeding, but it completely suffocated the model's technical reasoning. The outputs became bland, generic, and useless.
+
+>The reality of this PoC is a deliberate engineering compromise: **I chose to optimize for high-quality, actionable architectural insights over perfectly sterile metadata.** I rolled the prompt back to a loosely constrained version. Bob might occasionally leak an internal execution phrase into the UI, but in exchange, it delivers **senior-level, highly specific technical deep-dives.**
+
+<br>
 Because I am executing this as a solo developer, I had to make practical design trade-offs for this version. The biggest one? Right now, you still have to manually prompt Bob in the IDE to trigger the orchestration loops. I proved the underlying engine works flawlessly—now here is how I plan to scale it.
 
 ### Where I Am Taking Naur Next:
@@ -329,8 +350,8 @@ Because I am executing this as a solo developer, I had to make practical design 
 > *"Programming properly should be regarded as an activity by which the programmers form or achieve a certain kind of insight, a theory, of the matters at hand."* — Peter Naur
 
 <br>
----
 
+---
 
 ### 8. Project Evolution & History
 
