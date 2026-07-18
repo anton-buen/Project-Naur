@@ -97,23 +97,38 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "update_domain_constraint":
         domain = arguments.get("domain", "").strip().upper()
 
+        valid_domains = ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"]
+        if domain not in valid_domains:
+            return [TextContent(
+                type="text",
+                text=f"Error: invalid domain {domain!r}. Must be one of {valid_domains}.",
+            )]
+
         t_data = arguments.get("constraint_text", [])
-        text = "\n".join([f"- {t}" for t in t_data]) if isinstance(t_data, list) else str(t_data)
+        if isinstance(t_data, list):
+            text = "\n".join(t_data).replace("\\n", "\n")
+        else:
+            return [TextContent(type="text", text="Error: 'constraint_text' must be a JSON array of strings.")]
 
         b_data = arguments.get("business_impact", [])
-        biz = "\n".join([f"- {b}" for b in b_data]) if isinstance(b_data, list) else str(b_data)
+        if isinstance(b_data, list):
+            biz = "\n".join(b_data).replace("\\n", "\n")
+        else:
+            return [TextContent(type="text", text="Error: 'business_impact' must be a JSON array of strings.")]
 
-        deep = arguments.get("deep_dive", "").strip()
-        risk = arguments.get("risk_level", "LOW").strip().upper()
+        deep = arguments.get("deep_dive", "").strip().replace("\\n", "\n")
+        risk_level = arguments.get("risk_level", "LOW").strip().upper()
 
-        success = sm.update_constraint(domain, text, biz, deep, risk)
-        return [TextContent(type="text", text="Success" if success else "Failure")]
+        success = sm.update_constraint(domain, text, biz, deep, risk_level)
+        return [TextContent(type="text", text="Success" if success else "Failure: database write error.")]
 
     elif name == "upsert_project_dictionary":
         term = arguments.get("term", "").strip()
         defn = arguments.get("definition", "").strip()
+        if not term:
+            return [TextContent(type="text", text="Error: 'term' must be a non-empty string.")]
         success = sm.upsert_glossary_term(term, defn)
-        return [TextContent(type="text", text="Success" if success else "Failure")]
+        return [TextContent(type="text", text="Success" if success else "Failure: database write error.")]
 
     else:
         raise ValueError(f"Unknown tool: '{name}'")
@@ -121,6 +136,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 async def main() -> None:
     """Start the MCP server and run until the stdio streams close."""
+    sm.init_db()
     async with stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 

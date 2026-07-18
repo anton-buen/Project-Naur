@@ -1,4 +1,6 @@
 import re
+import html
+import base64
 import streamlit as st
 import src.state_manager as sm
 from datetime import datetime
@@ -54,7 +56,7 @@ def parse_markdown(text: str) -> str:
                 in_table = True
                 is_first_table_row = True
 
-            if re.match(r'^\|[\s\-\|]+\|$', stripped):
+            if re.match(r'^\|[\s\-\:\|]+\|$', stripped):
                 is_first_table_row = False
                 continue
 
@@ -251,6 +253,7 @@ def apply_adaptive_theme() -> None:
     """, unsafe_allow_html=True)
 
 
+sm.init_db()
 apply_adaptive_theme()
 
 with st.sidebar:
@@ -307,7 +310,7 @@ if constraints or global_summary:
     all_risks = list(constraints.values()) + ([global_summary] if global_summary else [])
     risk_priority = {"HIGH": 2, "MEDIUM": 1, "LOW": 0}
     highest_risk = max(
-        (v.get("risk", "LOW") for v in all_risks if isinstance(v, dict)),
+        (v.get("risk_level", "LOW") for v in all_risks if isinstance(v, dict)),
         key=lambda r: risk_priority.get(r, 0),
         default="LOW",
     )
@@ -321,7 +324,7 @@ if constraints or global_summary:
         header_html += "<div style='display: flex; gap: 6px; align-items: center; border-left: 1px solid rgba(128,128,128,0.2); padding-left: 12px; margin-left: 4px;'>"
         header_html += "<span style='font-size: 0.65rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; opacity: 0.5;'>Blast Radius:</span>"
         for dom in active_domains:
-            dom_risk = constraints[dom].get("risk", "LOW")
+            dom_risk = constraints[dom].get("risk_level", "LOW")
             header_html += f"<div class='mini-blast mini-{dom_risk}' title='{dom} Risk: {dom_risk}'>{dom}</div>"
         header_html += "</div>"
     header_html += "</div>"
@@ -329,9 +332,9 @@ if constraints or global_summary:
 
     if global_summary:
         with st.expander("RATIONALE", expanded=False):
-            tech_text = parse_markdown(global_summary.get("text", ""))
-            biz_text = parse_markdown(global_summary.get("business", ""))
-            deep_dive = parse_markdown(global_summary.get("deep_dive", ""))
+            tech_text = parse_markdown(html.escape(global_summary.get("constraint_text", "") or ""))
+            biz_text  = parse_markdown(html.escape(global_summary.get("business_impact", "") or ""))
+            deep_dive = parse_markdown(html.escape(global_summary.get("deep_dive", "") or ""))
 
             deep_dive_html = (
                 f"<details class='deep-dive'><summary>Deep Dive</summary><div class='deep-content'>{deep_dive}</div></details>"
@@ -369,9 +372,9 @@ if constraints:
                 if i + j < len(constraint_items):
                     domain, data = constraint_items[i + j]
 
-                    tech_text  = parse_markdown(data.get("text", ""))
-                    biz_text   = parse_markdown(data.get("business", ""))
-                    deep_dive  = parse_markdown(data.get("deep_dive", ""))
+                    tech_text  = parse_markdown(html.escape(data.get("constraint_text", "") or ""))
+                    biz_text   = parse_markdown(html.escape(data.get("business_impact", "") or ""))
+                    deep_dive  = parse_markdown(html.escape(data.get("deep_dive", "") or ""))
                     conf       = domain_config.get(domain, {"name": domain, "class": "card-be"})
 
                     deep_dive_html = (
@@ -397,42 +400,69 @@ if glossary:
     with st.expander("PROJECT DICTIONARY", expanded=False):
         terms_html = ""
         for term, definition in glossary.items():
-            clean_def = parse_markdown(definition).replace("In Project Naur, ", "").replace("Project Naur", "This project")
-            terms_html += f"<div class='glossary-term'>{term}</div><div class='glossary-definition'>{clean_def}</div>"
+            raw_def = (definition or "").replace("In Project Naur, ", "").replace("Project Naur", "This project")
+            clean_def = parse_markdown(html.escape(raw_def))
+            terms_html += f"<div class='glossary-term'>{html.escape(term)}</div><div class='glossary-definition'>{clean_def}</div>"
         st.markdown(f"<div class='glossary-section'>{terms_html}</div>", unsafe_allow_html=True)
 
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 thread = sm.get_chat_history()
+
+def make_avatar_uri(initials: str, bg: str, fg: str) -> str:
+    """Return a base64 data URI for a simple SVG circle avatar.
+
+    Args:
+        initials: Text to display inside the circle (1–2 characters).
+        bg: Fill colour for the circle (CSS hex, e.g. ``"#2A2A2A"``).
+        fg: Text colour (CSS hex, e.g. ``"#E9DDCF"``).
+
+    Returns:
+        A ``data:image/svg+xml;base64,...`` string safe to use as an
+        ``<img src>`` or Streamlit avatar URL.
+    """
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">'
+        f'<circle cx="20" cy="20" r="20" fill="{bg}"/>'
+        f'<text x="20" y="26" text-anchor="middle" font-size="13" '
+        f'font-weight="bold" font-family="Helvetica,Arial,sans-serif" fill="{fg}">{initials}</text>'
+        f'</svg>'
+    )
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+
+
+_ROLE_AVATAR_MAP = {
+    "Product Manager":    ("PM", "#2A2A2A", "#E9DDCF"),
+    "Frontend Engineer":  ("FE", "#2A2A2A", "#E9DDCF"),
+    "Backend Engineer":   ("BE", "#2A2A2A", "#E9DDCF"),
+    "Data Scientist":     ("DS", "#2A2A2A", "#E9DDCF"),
+    "UI/UX Designer":     ("UI", "#2A2A2A", "#E9DDCF"),
+}
+_NAUR_AVATAR = make_avatar_uri("N", "#C48A4A", "#111111")
 
 for msg in thread:
     clean_content = re.sub(r' \[Context: .*?\]', '', msg["content"])
     clean_content = re.sub(r' \[Governance: .*?\]', '', clean_content)
 
     if msg["role"] == "human":
-        avatar_initials = "U"
-        if "[Product" in clean_content:  avatar_initials = "PM"
-        elif "[Frontend" in clean_content: avatar_initials = "FE"
-        elif "[Backend" in clean_content:  avatar_initials = "BE"
-        elif "[Data" in clean_content:     avatar_initials = "DS"
-        elif "[UI" in clean_content:       avatar_initials = "UI"
-
-        avatar_url = f"https://ui-avatars.com/api/?name={avatar_initials}&background=2A2A2A&color=E9DDCF&rounded=true&bold=true&font-size=0.4"
-        with st.chat_message("human", avatar=avatar_url):
+        role_match = re.match(r'^\[([^\]]+)\]', msg["content"])
+        role_tag   = role_match.group(1) if role_match else ""
+        initials, bg, fg = _ROLE_AVATAR_MAP.get(role_tag, ("U", "#2A2A2A", "#E9DDCF"))
+        avatar_uri = make_avatar_uri(initials, bg, fg)
+        with st.chat_message("human", avatar=avatar_uri):
             st.markdown(f"<div class='chat-human'>{clean_content}</div>", unsafe_allow_html=True)
 
     elif msg["role"] == "assistant":
-        naur_avatar = "https://ui-avatars.com/api/?name=N&background=C48A4A&color=111111&rounded=true&bold=true"
-        with st.chat_message("assistant", avatar=naur_avatar):
+        with st.chat_message("assistant", avatar=_NAUR_AVATAR):
             st.markdown(f"<div class='chat-ai'>{clean_content}</div>", unsafe_allow_html=True)
 
 st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
 
 if user_intent := st.chat_input("Join the discussion..."):
-    active_role = st.session_state.get("active_role", "Product Manager")
+    active_role  = st.session_state.get("active_role", "Product Manager")
+    ctx_value    = st.session_state.get("global_context", "").strip()
     stamped_intent = f"[{active_role}] {user_intent}"
-    global_context = st.session_state.get("global_context", "").strip()
-    if global_context:
-        stamped_intent += f" [Context: {global_context} | Governance: {gov_phase}]"
+    if ctx_value:
+        stamped_intent += f" [Context: {ctx_value} | Governance: {gov_phase}]"
     else:
         stamped_intent += f" [Governance: {gov_phase}]"
     sm.append_message("human", stamped_intent)

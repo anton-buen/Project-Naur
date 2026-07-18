@@ -72,7 +72,7 @@ def get_chat_history() -> list[dict]:
         return []
 
 
-def update_constraint(domain: str, text: str, business_impact: str, deep_dive: str, risk: str) -> bool:
+def update_constraint(domain: str, text: str, business_impact: str, deep_dive: str, risk_level: str) -> bool:
     """Insert or replace a domain constraint record.
 
     Args:
@@ -80,7 +80,7 @@ def update_constraint(domain: str, text: str, business_impact: str, deep_dive: s
         text: Technical constraint description.
         business_impact: Plain-language business impact statement.
         deep_dive: Long-form technical explanation.
-        risk: Risk level — ``HIGH``, ``MEDIUM``, or ``LOW``.
+        risk_level: Risk level — ``HIGH``, ``MEDIUM``, or ``LOW``.
 
     Returns:
         ``True`` on success, ``False`` if the domain is invalid or a
@@ -88,16 +88,18 @@ def update_constraint(domain: str, text: str, business_impact: str, deep_dive: s
     """
     valid_domains = ["PROD", "FE", "BE", "DS", "UI", "GLOBAL"]
     if domain not in valid_domains:
+        logger.error("update_constraint called with invalid domain %r; valid: %s", domain, valid_domains)
         return False
     try:
         with get_connection() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO domain_constraints "
                 "(domain, constraint_text, business_impact, deep_dive, risk_level) VALUES (?, ?, ?, ?, ?)",
-                (domain, text, business_impact, deep_dive, risk),
+                (domain, text, business_impact, deep_dive, risk_level),
             )
         return True
     except sqlite3.Error:
+        logger.exception("update_constraint DB error for domain %r", domain)
         return False
 
 
@@ -116,10 +118,10 @@ def get_constraints() -> dict:
             ).fetchall()
             return {
                 r["domain"]: {
-                    "text": r["constraint_text"],
-                    "business": r["business_impact"],
-                    "deep_dive": r["deep_dive"],
-                    "risk": r["risk_level"],
+                    "constraint_text": r["constraint_text"],
+                    "business_impact": r["business_impact"],
+                    "deep_dive":       r["deep_dive"],
+                    "risk_level":      r["risk_level"] or "LOW",
                 }
                 for r in rows
             }
@@ -166,19 +168,19 @@ def clear_ledger() -> bool:
     """Delete all rows from every application table.
 
     Clears ``chat_ledger``, ``domain_constraints``, and ``project_glossary``
-    in a single transaction.
+    in a single atomic transaction.
 
     Returns:
         ``True`` on success, ``False`` if a database error occurs.
     """
     try:
         with get_connection() as conn:
+            conn.execute("BEGIN")
             conn.execute("DELETE FROM chat_ledger")
             conn.execute("DELETE FROM domain_constraints")
             conn.execute("DELETE FROM project_glossary")
+            conn.execute("COMMIT")
         return True
     except sqlite3.Error:
+        logger.exception("clear_ledger failed; database may be in a partially cleared state")
         return False
-
-
-init_db()

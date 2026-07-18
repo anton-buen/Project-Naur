@@ -1,0 +1,524 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Naur — Architectural Audit</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.6; color: #1f2328;
+    background: #ffffff; padding: 2rem 1rem;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  /* Header */
+  .report-header { border-bottom: 2px solid #e5e7eb; padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  .report-header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; color: #1f2328; }
+  .report-header .meta { font-size: 0.8rem; color: #57606a; margin-top: 0.35rem; }
+  .report-header .meta span { margin-right: 1.5rem; }
+
+  /* Section titles */
+  .section-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #57606a;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.4rem; margin-bottom: 1.25rem; margin-top: 2.5rem;
+  }
+  .section-intro { font-size: 0.88rem; color: #57606a; margin-bottom: 1.25rem; line-height: 1.55; }
+
+  /* Finding cards */
+  .finding {
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    margin-bottom: 1rem; overflow: hidden;
+  }
+  .finding-header {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.85rem 1rem; background: #f7f8fa;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .badge {
+    flex-shrink: 0; font-size: 0.65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    padding: 0.2rem 0.55rem; border-radius: 3px;
+    margin-top: 2px;
+  }
+  .badge-critical { background: #B33A3A; color: #fff; }
+  .badge-medium   { background: #C48A4A; color: #111; }
+  .badge-low      { background: #4E6B4E; color: #fff; }
+  .badge-info     { background: #3b82d4; color: #fff; }
+
+  .finding-title { font-size: 0.92rem; font-weight: 600; color: #1f2328; line-height: 1.4; }
+  .finding-sub   { font-size: 0.78rem; color: #57606a; margin-top: 0.1rem; }
+
+  .finding-body { padding: 0.9rem 1rem; font-size: 0.86rem; line-height: 1.65; }
+  .finding-body p { margin-bottom: 0.65rem; }
+  .finding-body p:last-child { margin-bottom: 0; }
+
+  /* Code blocks */
+  pre {
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 4px;
+    padding: 0.7rem 0.9rem; font-size: 0.8rem; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    overflow-x: auto; margin: 0.6rem 0; color: #1f2328; line-height: 1.5;
+  }
+  code {
+    background: rgba(128,128,128,0.1); padding: 1px 5px; border-radius: 3px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.82em;
+  }
+
+  /* Fix blocks */
+  .fix-block {
+    background: #f0f7f0; border: 1px solid #a5d6a7; border-left: 3px solid #4E6B4E;
+    border-radius: 4px; padding: 0.75rem 1rem; margin-top: 0.65rem;
+    font-size: 0.84rem; line-height: 1.6;
+  }
+  .fix-block .fix-label {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: #4E6B4E; margin-bottom: 0.3rem;
+  }
+
+  /* Summary table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin: 0.5rem 0; }
+  th { background: #f7f8fa; font-weight: 700; text-align: left; padding: 0.55rem 0.75rem; border: 1px solid #e5e7eb; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #57606a; }
+  td { padding: 0.55rem 0.75rem; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f8fa; }
+
+  /* Severity dot */
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .dot-critical { background: #B33A3A; }
+  .dot-medium   { background: #C48A4A; }
+  .dot-low      { background: #4E6B4E; }
+
+  /* Footer */
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 0.75rem; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  
+  <div class="report-header">
+    <h1>Naur — Architectural Audit Report</h1>
+    <div class="meta">
+      <span><strong>Scope:</strong> app.py · src/state_manager.py · src/mcp_server.py</span>
+      <span><strong>Vectors:</strong> 4 (DB Gatekeeping · Protocol Schema · Serialization · Decoupling)</span>
+    </div>
+  </div>
+
+  
+  <div class="section-title">Executive Summary</div>
+  <table>
+    <thead>
+      <tr><th>Finding</th><th>Severity</th><th>File</th><th>Vector</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Array-to-string join injects literal <code>\n</code> into DB, breaking Markdown parser</td><td><span class="dot dot-critical"></span>Critical</td><td>mcp_server.py</td><td>Serialization</td></tr>
+      <tr><td>Bullet prefix double-applied: MCP adds <code>- </code>, <code>parse_markdown()</code> adds another <code>&lt;li&gt;</code></td><td><span class="dot dot-critical"></span>Critical</td><td>mcp_server.py / app.py</td><td>Serialization</td></tr>
+      <tr><td>Column name aliasing gap: DB stores <code>business_impact</code>, <code>risk_level</code>; Python dict emits <code>business</code>, <code>risk</code></td><td><span class="dot dot-medium"></span>Medium</td><td>state_manager.py</td><td>Protocol Schema</td></tr>
+      <tr><td><code>clear_ledger()</code> executes three DELETE statements outside an explicit transaction</td><td><span class="dot dot-medium"></span>Medium</td><td>state_manager.py</td><td>DB Gatekeeping</td></tr>
+      <tr><td>Glossary <code>.replace()</code> chain fires unconditionally on every term including empty strings</td><td><span class="dot dot-medium"></span>Medium</td><td>app.py</td><td>Serialization</td></tr>
+      <tr><td>Chat avatar role-detection reads pre-strip content, not post-strip <code>clean_content</code></td><td><span class="dot dot-low"></span>Low</td><td>app.py</td><td>Decoupling / Resilience</td></tr>
+      <tr><td>External avatar URL leaks to <code>ui-avatars.com</code> — breaks in air-gapped / offline mode</td><td><span class="dot dot-low"></span>Low</td><td>app.py</td><td>Decoupling</td></tr>
+      <tr><td><code>init_db()</code> called at module import time — side-effects on test import</td><td><span class="dot dot-low"></span>Low</td><td>state_manager.py</td><td>DB Gatekeeping</td></tr>
+      <tr><td>Unused <code>pandas</code>, <code>pyarrow</code>, <code>narwhals</code>, <code>altair</code> in requirements — dead transitive surface</td><td><span class="dot dot-low"></span>Low</td><td>requirements.txt</td><td>Dead Code</td></tr>
+    </tbody>
+  </table>
+
+  
+  <div class="section-title">1 — Critical Protocol &amp; Schema Inconsistencies</div>
+  <div class="section-intro">
+    Mismatched dictionary keys, Pydantic-schema blind spots, and transactional vulnerabilities that can produce silent data corruption or tool-invocation failures.
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-critical">Critical</span>
+      <div>
+        <div class="finding-title">Array join produces literal <code>\n</code> stored in SQLite, not real newlines</div>
+        <div class="finding-sub">mcp_server.py : lines 101–104 → state_manager.py : update_constraint → app.py : parse_markdown()</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The MCP schema declares <code>constraint_text</code> and <code>business_impact</code> as JSON arrays of strings.
+        The dispatcher joins them with a Python newline character (<code>"\n"</code>):
+      </p>
+      <pre>text = "\n".join([f"- {t}" for t in t_data])</pre>
+      <p>
+        When the MCP client (IBM Bob) serializes the tool arguments over the <strong>stdio transport as a JSON payload</strong>,
+        the resulting string that arrives in <code>arguments</code> is already a decoded Python string — so the join itself is correct.
+        <strong>However</strong>, if the LLM agent chooses to pass a pre-serialized JSON string instead of a native array (a common
+        failure mode with function-calling models), the <code>isinstance(t_data, list)</code> guard silently falls through to
+        <code>str(t_data)</code>, which produces the raw Python repr <code>"['bullet one', 'bullet two']"</code> — stored verbatim in SQLite
+        and rendered as broken text in the Streamlit card.
+      </p>
+      <p>
+        Additionally, even on the happy path, the joined string stored in <code>constraint_text</code> begins with <code>- bullet</code>.
+        When <code>parse_markdown()</code> in <code>app.py</code> processes this, it detects the leading <code>- </code> and wraps it in a
+        <code>&lt;li&gt;</code> tag — which is correct. But the MCP layer has already added the <code>- </code> prefix, meaning every
+        consumer downstream will always receive pre-formatted markdown it cannot strip.
+        If any other consumer reads the raw DB value expecting plain text, it will receive markdown syntax.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Store arrays as raw joined strings <strong>without the <code>- </code> prefix</strong> at the MCP layer; let
+        <code>parse_markdown()</code> be the sole formatting authority. Change the join in <code>mcp_server.py</code> to:
+        <pre>text = "\n".join(t_data) if isinstance(t_data, list) else str(t_data)</pre>
+        Add a validation guard to reject non-list payloads with a structured error instead of silently coercing via <code>str()</code>.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-medium">Medium</span>
+      <div>
+        <div class="finding-title">Column name aliasing gap: DB schema vs. Python API surface mismatch</div>
+        <div class="finding-sub">state_manager.py : get_constraints() lines 117–124 vs. app.py : lines 332–334, 372–374</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The SQLite table <code>domain_constraints</code> stores columns named <code>business_impact</code> and <code>risk_level</code>.
+        The <code>get_constraints()</code> function re-aliases them on return:
+      </p>
+      <pre>"business": r["business_impact"],
+"risk":     r["risk_level"],</pre>
+      <p>
+        Meanwhile, the MCP tool schema names its parameters <code>business_impact</code> and <code>risk_level</code>, and the
+        <code>update_constraint()</code> function signature uses a positional argument named <code>risk</code> — not <code>risk_level</code>.
+        This creates <strong>three distinct names for the same concept</strong> across the call chain:
+      </p>
+      <pre>MCP schema key    → "risk_level"       (Tool inputSchema)
+state_manager arg → risk               (update_constraint parameter)
+DB column         → risk_level         (domain_constraints table)
+Python dict key   → "risk"             (get_constraints return value)
+app.py access     → data.get("risk")   (presentation layer)</pre>
+      <p>
+        This is not a runtime bug today because the aliasing is internally consistent. However, it is a maintenance trap:
+        any future developer adding a new read path or a second consumer of <code>get_constraints()</code> will face a
+        non-obvious key name that does not match the DB column or the tool schema, increasing the probability of a
+        <code>KeyError</code> / silent <code>None</code> regression. The MCP tool and the DB column agree on
+        <code>business_impact</code>/<code>risk_level</code>; the Python API should surface the same names.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Rename the aliased keys in <code>get_constraints()</code> to match the DB column names, and update <code>app.py</code> accordingly:
+        <pre># state_manager.py
+"business_impact": r["business_impact"],
+"risk_level":      r["risk_level"],
+
+# app.py
+data.get("business_impact", "")
+data.get("risk_level", "LOW")</pre>
+        Also rename the <code>update_constraint()</code> parameter from <code>risk</code> to <code>risk_level</code> for full chain consistency.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-medium">Medium</span>
+      <div>
+        <div class="finding-title"><code>clear_ledger()</code> issues three DELETEs inside one <code>with</code> block but without explicit transaction demarcation</div>
+        <div class="finding-sub">state_manager.py : clear_ledger() lines 175–178</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        Python's <code>sqlite3</code> module uses <strong>implicit transaction management</strong>. The <code>with conn:</code>
+        context manager commits on exit and rolls back on exception — but only for DML statements that have been issued
+        since the last implicit commit. SQLite's default isolation level means the three DELETE statements may be
+        auto-committed individually if Python's implicit transaction logic issues an implicit <code>BEGIN</code> before each one.
+      </p>
+      <p>
+        If the second or third DELETE fails (e.g., due to a concurrent reader holding a shared lock beyond the 15-second
+        timeout), the connection context manager will roll back only the in-flight statement, potentially leaving
+        <code>chat_ledger</code> empty while <code>domain_constraints</code> and <code>project_glossary</code> retain stale data.
+        The resulting partial-clear state is invisible to the UI — it will rerun, appear cleared, then
+        immediately re-render stale constraint cards from the un-cleared tables.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Wrap all three DELETEs in an explicit <code>BEGIN</code>/<code>COMMIT</code> to guarantee atomicity:
+        <pre>with get_connection() as conn:
+    conn.execute("BEGIN")
+    conn.execute("DELETE FROM chat_ledger")
+    conn.execute("DELETE FROM domain_constraints")
+    conn.execute("DELETE FROM project_glossary")
+    conn.execute("COMMIT")</pre>
+        Or equivalently, use <code>isolation_level=None</code> on the connection and manage the transaction manually.
+      </div>
+    </div>
+  </div>
+
+
+  
+  <div class="section-title">2 — Dead Code &amp; Architectural Drift</div>
+  <div class="section-intro">
+    Legacy logic, unused imports, and boundary violations that erode the decoupled separation of concerns.
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-low">Low</span>
+      <div>
+        <div class="finding-title"><code>init_db()</code> executes at module import time — untestable side-effect</div>
+        <div class="finding-sub">state_manager.py : line 184</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The bare call <code>init_db()</code> at the bottom of <code>state_manager.py</code> runs the moment anything imports the module,
+        including unit test runners, linters, or the MCP server subprocess. This creates a physical side-effect
+        (creates/opens <code>naur_state.db</code> on disk) purely as a consequence of an <code>import</code> statement.
+      </p>
+      <p>
+        The <strong>architectural contract</strong> of the system states that <code>state_manager</code> is the <em>exclusive gatekeeper</em>.
+        But a gatekeeper that opens the gate unconditionally on construction is not a gatekeeper — it is an auto-initializer.
+        Any test that imports <code>state_manager</code> will produce a stale or polluted <code>naur_state.db</code> in the project root.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Move <code>init_db()</code> to the application entrypoints that own startup: the top of <code>app.py</code> and the <code>main()</code>
+        function in <code>mcp_server.py</code>. Remove the bare call from the module body.
+        <pre># app.py — top of file, after imports
+sm.init_db()
+
+# mcp_server.py — inside main()
+async def main() -&gt; None:
+    sm.init_db()
+    async with stdio_server() as (r, w): ...</pre>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-low">Low</span>
+      <div>
+        <div class="finding-title">Chat avatar role-detection reads the wrong variable — always falls through to <code>"U"</code></div>
+        <div class="finding-sub">app.py : lines 413–417</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The avatar initial detection logic checks for role tags in <code>clean_content</code>:
+      </p>
+      <pre>if "[Product" in clean_content:  avatar_initials = "PM"
+elif "[Frontend" in clean_content: avatar_initials = "FE"
+...</pre>
+      <p>
+        But <code>clean_content</code> has already been processed by two <code>re.sub()</code> calls that strip
+        <code>[Context: ...]</code> and <code>[Governance: ...]</code> tags. The role tag (<code>[Product Manager]</code>,
+        <code>[Frontend Engineer]</code>, etc.) is prepended to the message in the <em>chat input handler</em>
+        at line 432 as <code>f"[{active_role}] {user_intent}"</code> and is <strong>not</strong> stripped by either regex — so
+        <code>clean_content</code> does still contain the role tag. This means the detection <em>does</em> work today.
+      </p>
+      <p>
+        However, the strip regexes use a leading space: <code>' \[Context: .*?\]'</code>. A message that starts
+        with <code>[Context:</code> (no leading space) would not be stripped, while a role tag at position 0 is never
+        preceded by a space. The logic is accidentally correct but fragile — a future change to either the stamping
+        format or the strip pattern will silently break avatar assignment, and there is no test coverage to catch it.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Extract the role from the tag directly rather than doing substring detection on the full message string:
+        <pre>role_match = re.match(r'^\[([^\]]+)\]', msg["content"])
+role_tag = role_match.group(1) if role_match else ""
+avatar_map = {"Product Manager": "PM", "Frontend Engineer": "FE",
+              "Backend Engineer": "BE", "Data Scientist": "DS", "UI/UX Designer": "UI"}
+avatar_initials = avatar_map.get(role_tag, "U")</pre>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-low">Low</span>
+      <div>
+        <div class="finding-title">Dead dependency surface: <code>pandas</code>, <code>pyarrow</code>, <code>narwhals</code>, <code>altair</code> are Streamlit transitive deps with no direct usage</div>
+        <div class="finding-sub">requirements.txt</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        <code>requirements.txt</code> pins <code>pandas==3.0.3</code>, <code>pyarrow==24.0.0</code>, <code>narwhals==2.23.0</code>,
+        and <code>altair==6.2.2</code> as top-level dependencies. None of these are directly imported in
+        <code>app.py</code>, <code>state_manager.py</code>, or <code>mcp_server.py</code>. They are pulled in transitively by Streamlit.
+      </p>
+      <p>
+        Pinning transitive dependencies as first-class entries inflates the attack surface and causes unnecessary
+        dependency conflict noise on upgrades. More critically, <code>pyarrow==24.0.0</code> is a <strong>non-existent version</strong>
+        at time of writing (latest stable is 18.x) — this will cause <code>pip install -r requirements.txt</code> to fail
+        outright in a clean environment.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Remove <code>altair</code>, <code>narwhals</code>, <code>pyarrow</code>, and <code>pandas</code> from <code>requirements.txt</code>
+        and let Streamlit resolve its own transitive graph. The direct dependency set for this application is:
+        <code>streamlit</code>, <code>mcp</code>, and optionally <code>python-dotenv</code>.
+      </div>
+    </div>
+  </div>
+
+
+  
+  <div class="section-title">3 — Resilience &amp; Sanitization Fixes</div>
+  <div class="section-intro">
+    String parsing fragility, empty-state rendering gaps, and presentation layer hardening recommendations.
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-critical">Critical</span>
+      <div>
+        <div class="finding-title">Glossary <code>.replace()</code> chain fires on raw HTML output of <code>parse_markdown()</code>, not on source text</div>
+        <div class="finding-sub">app.py : line 400</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The glossary rendering pipeline applies string replacements <em>after</em> Markdown-to-HTML conversion:
+      </p>
+      <pre>clean_def = parse_markdown(definition).replace("In Project Naur, ", "").replace("Project Naur", "This project")</pre>
+      <p>
+        This is architecturally inverted. <code>parse_markdown()</code> returns an HTML string with inline styles,
+        <code>&lt;div&gt;</code>, <code>&lt;b&gt;</code>, etc. The <code>.replace()</code> calls then perform a naive substring
+        search on that HTML. This means:
+      </p>
+      <p>
+        1. If the text <code>"Project Naur"</code> appears split across an HTML tag boundary (e.g., <code>Project &lt;b&gt;Naur&lt;/b&gt;</code>),
+        neither replace will fire, leaving the raw text in place — silent failure.
+        2. If <code>definition</code> is an empty string or <code>None</code>, <code>parse_markdown()</code> returns <code>""</code>,
+        and the <code>.replace()</code> calls on an empty string are harmless but semantically undefined.
+        3. If <code>definition</code> is <code>None</code> (the DB returned a NULL), <code>parse_markdown()</code>'s
+        <code>if not text</code> guard returns <code>""</code> safely — but only because of that guard. Any future refactor
+        that reorders those two operations will crash with <code>AttributeError: 'NoneType' object has no attribute 'replace'</code>.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Apply text sanitization <strong>before</strong> Markdown conversion, on the raw source string:
+        <pre>raw_def = (definition or "").replace("In Project Naur, ", "").replace("Project Naur", "This project")
+clean_def = parse_markdown(raw_def)</pre>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-medium">Medium</span>
+      <div>
+        <div class="finding-title"><code>parse_markdown()</code> is not safe against inputs containing unbalanced HTML from the DB</div>
+        <div class="finding-sub">app.py : parse_markdown() — called with raw DB values from deep_dive, constraint_text, business_impact</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        <code>parse_markdown()</code> renders its output via <code>st.markdown(..., unsafe_allow_html=True)</code>.
+        The <code>deep_dive</code> field in particular is defined in the MCP schema as a freeform <code>"string"</code>
+        with the description <em>"Put long-form technical explanations here."</em> — there is no length cap, no HTML
+        stripping, and no escaping applied before the value is stored in SQLite or rendered.
+      </p>
+      <p>
+        If an LLM agent writes raw HTML into <code>deep_dive</code> (e.g., <code>&lt;script&gt;</code> or a malformed
+        <code>&lt;div&gt;</code>), it will be stored verbatim and injected directly into the Streamlit page via
+        <code>unsafe_allow_html=True</code>. While Streamlit's server-side environment limits the impact of XSS,
+        a malformed tag can fully break the card layout in the browser.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Apply a lightweight HTML escape on values read from the DB <em>before</em> passing to <code>parse_markdown()</code>,
+        since <code>parse_markdown()</code> already re-generates its own safe HTML tags:
+        <pre>import html
+tech_text = parse_markdown(html.escape(data.get("text", "") or ""))
+deep_dive = parse_markdown(html.escape(data.get("deep_dive", "") or ""))</pre>
+        The <code>or ""</code> coercion also eliminates the <code>None</code> propagation risk if a DB row has a NULL column.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-medium">Medium</span>
+      <div>
+        <div class="finding-title">Empty-state: <code>highest_risk</code> computation iterates a potentially heterogeneous list without full type guarding</div>
+        <div class="finding-sub">app.py : lines 307–313</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        The risk aggregation block builds <code>all_risks</code> from <code>constraints.values()</code> plus the optional
+        <code>global_summary</code>, then filters with <code>isinstance(v, dict)</code>. This guard is correct but
+        the code reaches this block only when <code>if constraints or global_summary</code> is truthy — meaning
+        at least one of them is non-empty. If <code>constraints</code> is empty (<code>{}</code>) and only
+        <code>global_summary</code> is present, <code>all_risks</code> will contain only <code>global_summary</code>.
+      </p>
+      <p>
+        The real risk is that <code>global_summary.get("risk")</code> returns <code>None</code> if the DB row's
+        <code>risk_level</code> column is NULL (which is possible since <code>INSERT OR REPLACE</code> does not enforce
+        NOT NULL). The <code>max(..., default="LOW")</code> catches the empty-iterator case but not the
+        <code>None</code>-from-<code>.get()</code> case: <code>risk_priority.get(None, 0)</code> returns <code>0</code>, so
+        <code>None</code> wins a tie as <code>"LOW"</code>-equivalent — silently producing a <code>None</code> value passed
+        into the f-string at line 319, which renders as the literal text <code>"Alignment Risk: None"</code> in the badge.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Coerce the risk value to a known default at the read site inside <code>get_constraints()</code>:
+        <pre>"risk": r["risk_level"] or "LOW",</pre>
+        And identically for the key rename fix above: <code>"risk_level": r["risk_level"] or "LOW"</code>.
+        This keeps the fallback logic in the data layer rather than scattering it across the presentation layer.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-low">Low</span>
+      <div>
+        <div class="finding-title">External avatar URL dependency — offline / air-gapped environment failure</div>
+        <div class="finding-sub">app.py : lines 419, 424</div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <p>
+        Both the human and assistant chat avatars are loaded from <code>ui-avatars.com</code> at render time.
+        This is a runtime HTTP dependency inside a tool advertised as a <strong>local, decoupled, air-gap-safe</strong>
+        architectural linter. In environments without internet access (common in enterprise settings where this
+        tool is most likely deployed), every chat message will render with a broken image icon instead of the
+        intended avatar, degrading the visual hierarchy of the conversation thread.
+      </p>
+      <div class="fix-block">
+        <div class="fix-label">Recommended Fix</div>
+        Generate initials avatars as inline SVG data URIs — no network call required:
+        <pre>def make_avatar_svg(initials: str, bg: str, fg: str) -&gt; str:
+    svg = (f'&lt;svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"&gt;'
+           f'&lt;circle cx="20" cy="20" r="20" fill="{bg}"/&gt;'
+           f'&lt;text x="20" y="25" text-anchor="middle" '
+           f'font-size="14" font-weight="bold" fill="{fg}"&gt;{initials}&lt;/text&gt;&lt;/svg&gt;')
+    import base64
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()</pre>
+      </div>
+    </div>
+  </div>
+
+  
+  <footer>
+    <p>Made with IBM Bob</p>
+  </footer>
+
+</div>
+</body>
+</html>
