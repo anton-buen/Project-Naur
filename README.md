@@ -255,8 +255,6 @@ Traditional workflows waste immense capital on manual alignment checking. Naur e
 
 Projects rarely stall because engineers cannot code fast enough; they stall because specialized disciplines operate in disconnected silos. By providing proactive workflow orchestration upstream—like flagging missing disciplinary perspectives via the "Missing Chair" validation—Naur forces cross-domain synchronization. When high-stakes proposals surface, human teams are susceptible to cognitive bias. Naur provides objective decision support by synthesizing technical requirements and business impacts into a clear, data-driven dashboard, giving teams the exact visibility they need to make rapid, risk-aware choices.
 
-Note: Per the official rules of the "AI Builders Challenge with IBM Bob," Naur's architecture directly serves the high-velocity requirements of professional racing environments. It eliminates communication latency and ensures multi-disciplinary teams maintain peak operational speed without internal friction.
-
 >NOTE: Per the official rules of "AI Builders Challenge with IBM Bob", Naur's architecture directly serves the high-velocity requirements of professional ***racing*** environments by eliminating communication latency and ensuring multi-disciplinary teams maintain peak operational speed without internal friction.
 >
 >>
